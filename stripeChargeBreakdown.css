@@ -3,6 +3,9 @@ html {
   color: rgb(48, 48, 48);
   font-family: sans-serif;
 }
+.title {
+  width: 360px;
+}
 
 select {
   height: 26px;
@@ -22,6 +25,7 @@ select {
 h3 {
   color: rgb(64, 116, 153);
   font-family: "Times New Roman", Times, serif;  
+  text-align: center;
   }
   
 .flow_form {

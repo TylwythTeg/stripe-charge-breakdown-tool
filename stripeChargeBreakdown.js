@@ -13,365 +13,197 @@ function decimalAdjust(t,e,i){return void 0===i||0==+i?Math[t](e):(e=+e,i=+i,isN
 
 /* load rates from OpenExchange */
 function loadRates() {
-		// Load exchange rates data via AJAX:
+    // Load exchange rates data via AJAX:
     $.getJSON(
-    	// NB: using Open Exchange Rates here, but you can use any source!
-    'https://openexchangerates.org/api/latest.json?app_id=8269d6a983bb4edb8bf4865bbb1b4bd4',
+        // NB: using Open Exchange Rates here, but you can use any source!
+        'https://openexchangerates.org/api/latest.json?app_id=7882ce077d9e44229e7b68b170ad47f9',
         function(data) {
             // Check money.js has finished loading:
-            if ( typeof fx !== "undefined" && fx.rates ) {
+            if (typeof fx !== "undefined" && fx.rates) {
                 fx.rates = data.rates;
                 fx.base = data.base;
             } else {
-              // If not, apply to fxSetup global:
+                // If not, apply to fxSetup global:
                 var fxSetup = {
-                    rates : data.rates,
-                    base : data.base
-               }
-               
+                    rates: data.rates,
+                    base: data.base
+                }
+
             }
-            console.log(fx.rates);
-           
         }
     );
 }
+loadRates();
 
-/* Because I don't know what same to same conversion does w/ money.js */
-//var function convert(amount, from, to) {
-//		if 
-//};
+var Money = function(amount, currency) {
+    var that = this;
 
-/* separation of concerns means applying fx fee or not outside of this function call */
-var Conversion = function (amount, from, to) {
-		this.presentmentAmount = amount;
-    this.presentmentCurrency = from;
-    this.settlementCurrency = to;
-    this.settlementAmount = Math.round10(fx.convert( amount ,{
-    		from: from,
-        to: to
-    }), -2);
-    
-     var settled = new Decimal(this.settlementAmount);
-     var presented = new Decimal(this.presentmentAmount);
-     this.rate = settled.dividedBy(presented);
-     return this;
-};
+    var zeroDecimalCurrencies = [
+        "MGA",
+        "BIF",
+        "PYG",
+        "CLP",
+        "DJF",
+        "RWF",
+        "GNF",
+        "JPY",
+        "VND",
+        "VUV",
+        "XAF",
+        "XOF",
+        "XPF",
+        "KRW",
+        "KMF",
+    ];
 
-var Funds = function(amount, currency) {
-		this.amount = amount;
-    this.currency = currency;
-};
-
-
-var Customer = function(country = null, currency = null) {
-    /* Customers that fall under European pricing */
-
-    this.card = {
-        country: {
-            code: country
-        },
-        currency: currency
+    this.toString = function() {
+        return that.amount + " " + that.currency;
     };
-    //this.european
+
+    this.currency = currency;
+    var rounding = zeroDecimalCurrencies.includes(currency) ? 0 : -2;
+    this.amount = new Decimal(Math.round10(amount, rounding));
+
+    this.convertTo = function(currency) {
+        var amount = fx.convert(that.amount, {
+            from: that.currency,
+            to: currency
+        });
+        return new Money(amount, currency);
+    };
+
+    /* Add basic Decimal.js support */
+    function buildMathMethods() {
+        var methods = ["plus", "minus", "times"];
+        for (var i = 0; i < methods.length; i++) {
+            let method = methods[i];
+            that[method] = function(money) {
+                if (money.hasOwnProperty("amount")) {
+                    var amount = that.amount[method](money.amount);
+                    return new Money(amount, that.currency);
+                }
+                else {
+                    var amount = that.amount[method](money);
+                    return new Money(amount, that.currency);
+                }
+            };
+        }
+    }
+    buildMathMethods();
 };
 
-var Platform = function(country, currency, platformFee) {
-    var platform = new Account(country, currency);
-    platform.platformFee = platformFee;
-    return platform;
-};
+var Customer = function(cardCountry) {
+    var europeanCustomers = [
+        "AD",
+        "AT",
+        "BE",
+        "BG",
+        "HR",
+        "CY",
+        "CZ",
+        "DK",
+        "EE",
+        "FO",
+        "FI",
+        "FR",
+        "DE",
+        "GI",
+        "GR",
+        "GL",
+        "GG",
+        "VA",
+        "HU",
+        "IS",
+        "IE",
+        "IM",
+        "IL",
+        "IT",
+        "JE",
+        "LV",
+        "LI",
+        "LT",
+        "LU",
+        "MT",
+        "MC",
+        "ME",
+        "NL",
+        "NO",
+        "PL",
+        "RO",
+        "PM",
+        "SM",
+        "RS",
+        "SK",
+        "SI",
+        "ES",
+        "SJ",
+        "SE",
+        "CH",
+        "TR",
+        "UK",
+        "MK",
+        "PT",
+    ];
+    this.country = cardCountry;
+    this.european = europeanCustomers.includes(cardCountry);
+}
 
 var Account = function(country, currency) {
-    this.country = countries[country];
+    var that = this;
+    this.country = country;
     this.currency = currency;
     this.pricing = countries[country].pricing;
 
+    this.hasDomesticPricingFor = function(customer) {
+        return ((that.country === customer.country) || (that.pricing.european && customer.european));
+    };
+    
+    this.pricingFor = function(customer) {
+        if (that.hasDomesticPricingFor(customer)) {
+            return that.pricing.domestic;
+        } else {
+            return that.pricing.international;
+        }
+    };
+}
+
+var Platform = function(country, currency, feePercent) {
+    var that = this;
+    this.country = country;
+    this.currency = currency;
+    this.feePercent = new Decimal(feePercent);
+    this.feeMultiplier = this.feePercent.times(0.01);
+    this.pricing = countries[country].pricing;
 };
 
+var ApplicationFee = function(platform, charge, type) {
 
-/* CONNECT: account argument is always the connected account  */
-var StripeFee = function(pricing, account, amount, customer, currency) {
-		this.settlementCurrency = currency;
-    var amount = new Decimal(amount);
-    
-    this.passedInPricing = pricing;
+    /* what is specified at the time of charge creation */
+    this.presentment = charge.presentment.times(platform.feeMultiplier);
 
-    /* use domestic, international, or european pricing */
-    if (account.country.code === customer.card.country.code) {
-    		var pricing = pricing.domestic;
-        var percent = new Decimal(pricing.percent);
-        var fixed = new Decimal(pricing.fixed);
+    /* No fx fee here because we're just converting a value */
+    this.settlement = this.presentment.convertTo(charge.settlement.currency);
+
+    /*  if destination, need to deduct stripe fee. If Direct, just set as settlement. */
+    if (type === "destination") {
+        this.afterStripeFee = this.settlement.minus(charge.stripeFee.settlement);
     } else {
-    		var pricing = pricing.international;
-        var percent = new Decimal(pricing.percent);
-        var fixed = new Decimal(pricing.fixed);
+        this.afterStripeFee = this.settlement;
     }
 
-    /* hard european override. not very elegant */
-    if (account.country.pricing.european && europeanCustomers.includes(customer.card.country.code)) {
-    		var pricing = this.passedInPricing.domestic;
-        var percent = new Decimal(pricing.percent);
-        var fixed = new Decimal(pricing.fixed);
+    this.final = this.afterStripeFee.convertTo(platform.currency);
+    
+    if (platform.currency !== charge.settlement.currency) {
+        this.fxFee = this.final.times(platform.pricing.fxMultiplier);
+        this.finalAfterFxFee = this.final.minus(this.fxFee);
+    } else {
+        this.fxFee = new Money(0, platform.currency);
+        this.finalAfterFxFee = this.final.minus(this.fxFee);
     }
-    
-    this.pricing = pricing;
-    
-    
-    
-    /* convert stripe fee from pricing currency to settlement */
-    /* so that we can subtract from amount */
-    console.log("P R E S E N T E D: " + fixed.toNumber());
- 
-    if (pricing.currency !== this.settlementCurrency) {
-    		var fixed = fx.convert(fixed.toNumber(), {
-          	from: this.passedInPricing.currency,
-            to: this.settlementCurrency
-          });
-          
-        var fixed = new Decimal(Math.round10(fixed, -2));
-    }
-    this.fixed = fixed;
-		console.log("S E T T L E D: " + fixed.toNumber());
-
-    var percentMultiplier = percent.times(0.01);
-
-    this.amount = Decimal(Math.round10(percentMultiplier.times(amount).plus(fixed), -2));
 };
-
-
-/* CONNECT: account argument is always the connected account  */
-var Charge = function(amount, currency, account, customer) {
-    var that = this;
-    this.presentmentAmount = amount;
-    this.customer = customer;
-    this.presentmentCurrency = currency;
-    this.account = account;
-    this.pricing = this.account.pricing;
-    this.settlementCurrency = account.currency;
-
-    this.converted = false;
-
-    var calculateCharge = function() {
-        /* The first thing to do is to settle the funds on the charge */
-        /* Funds object with amount: and currency:? */
-        if (that.presentmentCurrency !== that.settlementCurrency) {
-            that.converted = true;
-            // convert funds
-            var convertedAmount = fx.convert(amount, {
-            		from: that.presentmentCurrency,
-                to: that.settlementCurrency
-            });
-
-            var settled = new Decimal(convertedAmount);
-            var presented = new Decimal(amount);
-            var conversionRate = settled.dividedBy(presented);
-
-            that.conversionRate = conversionRate;
-            that.settlementAmount = new Decimal(Math.round10(settled, -2));
-
-
-            //	that.adjustedSettlementAmount = new Decimal(Math.round10(new Decimal(convertedAmount).times(0.98),-2));
-            
-            console.log(that.account);
-            console.log("FX PERCENT: " + that.account.pricing.fxPercent);
-            var multiplier = new Decimal(that.account.pricing.fxPercent).times(0.01);
-            var multiplier = new Decimal(1).minus(multiplier);
-            console.log("MULTIPLIER::::::: " + multiplier);
-
-            that.finalAmount = new Decimal(Math.round10(that.settlementAmount.times(multiplier), -2));
-
-            that.fxFee = that.settlementAmount.minus(that.finalAmount);
-					console.log("FSDFSDFSDFFSDFSD " + that.fxFee);
-
-        }
-        /*  no conversion necessary */
-        else {
-            that.finalAmount = new Decimal(that.presentmentAmount);
-
-            that.conversionRate = new Decimal(0);
-            that.settlementAmount = that.finalAmount;
-            that.settlementCurrency = that.presentmentCurrency;
-            that.fxFee = new Decimal(0);
-            console.log("FSDFSDFSDFFSDFSD " + that.fxFee);
-        }
-
-        /* The next thing to do is calculate stripe fee  */
-        /* Always use the pricing of the connected account*/
-        /* Stripe fee is always in settlement currency  */
-        /* pass this (charge object) instead */
-        that.stripeFee = new StripeFee(that.pricing, that.account, that.finalAmount, customer, that.settlementCurrency);
-    };
-
-
-
-    calculateCharge();
-
-    console.log("Presentment Amount: " + this.presentmentAmount);
-    console.log("Presentment Currency: " + this.presentmentCurrency);
-    console.log("Conversion Rate: " + this.conversionRate.toNumber());
-    console.log("Settlement Amount: " + this.settlementAmount.toNumber());
-    console.log("Settlement Currency: " + this.settlementCurrency);
-    console.log("FX Fee: " + this.fxFee.toNumber());
-    console.log("Adjusted (Final) Amount: " + this.finalAmount.toNumber());
-    console.log("Stripe Fee: " + this.stripeFee.amount.toNumber());
-    // Direct() and Destination() itself will deal with who GETS the stripe fee
-    //new StripeFee(this.pricing, this.account,this.amount, this.currency);
-    //StripeFee() can have parameter indicating any conversion
-
-		return this;
-};
-
-var Direct = function(platform, connected, customer, charge) {
-    var that = this;
-    this.charge = charge;
-    this.platform = platform;
-    this.connectedAccount = connected;
-    this.customer = customer;
-    
-    this.type = "direct";
-    
-
-    var connectedPortionCurrency = function() {
-        /* Always the settlement currency of connected account */
-        /* no conversion */
-
-        /*  subtract stripe fee from amount */
-        return connected.currency;
-    };
-
-    var platformPortionCurrency = function() {
-        /* Always the settlement currency of the platform */
-        return platform.currency;
-    };
-    
- 	/*  Always convert, check if currencies are same to apply fee (if applicable) afterward */
-
-
-		this.amountMinusStripeFee = that.charge.finalAmount.minus(that.charge.stripeFee.amount);
-    
-    var splitFunds = function(charge, platform, connected) {
-    			/* convert application fee from charge.presentmentCurrency to settlementcurrency */
-          /* so that we can take that amount away from the charge */
-          
-          
-          
-          // and we don't apply fx fee because we are just converting a number, not actual "money"
-          that.conversion = new Conversion(platform.platformFee, charge.presentmentCurrency, charge.settlementCurrency);
-          
-          that.applicationFee = that.conversion;
-          console.log("APP FEE " + that.applicationFee.settlementAmount);
-          
-        
-          that.applicationFee.finalAmount = Math.round10(fx.convert(
-          	that.applicationFee.settlementAmount, {
-            		from: that.applicationFee.settlementCurrency,
-                to: that.platform.currency
-            }), -2);
-          
-         var connectedPortion = that.amountMinusStripeFee.minus(that.conversion.settlementAmount);
-         
-         that.connectedPortion = new Funds(connectedPortion, charge.settlementCurrency);
-          console.log(that.conversion);
-          console.log("Connected Portion: " + that.connectedPortion.amount.toNumber());
-          
-          that.platformPortion =  that.amountMinusStripeFee.minus(connectedPortion);
-          that.platformPortion = new Funds(that.platformPortion, charge.settlementCurrency);
-          console.log("Platform Portion: "+  that.platformPortion.amount.toNumber());
-    };
-    
-    splitFunds(charge, platform, connected);
-
-    this.connectedPortionCurrency = connectedPortionCurrency();
-    this.platformPortionCurrency = platformPortionCurrency();
-
-    //this.connectedPortion = connectedPortion();
-    //console.log("Conneted portion: ", this.connectedPortion.toNumber());
-
-    //this.platformPortion = platformPortion();
-
-		
-
-
-};
-
-var Destination = function(platform, connected, customer, charge) {
-		var that = this;
-    this.charge = charge;
-    this.platform = platform;
-    this.connectedAccount = connected;
-    this.customer = customer;
-    
-    this.settlementCurrency = connected.currency;
-    
-    this.type = "destination";
-    
-    
-    var connectedPortionCurrency = function() {
-        /* Always the settlement currency of connected account */
-        return connected.currency;
-    };
-
-    var platformPortionCurrency = function() {
-        /* Always the settlement currency of the platform */
-        /* In reality it is in unconverted platform currency */
-        /* But the conversion of this to platform's currency is inevitable */
-        return platform.currency;
-    };
-
-    this.connectedPortionCurrency = connectedPortionCurrency();
-    this.platformPortionCurrency = platformPortionCurrency();
-    
-    
-    //this.amountMinusStripeFee = that.charge.finalAmount.minus(that.charge.stripeFee);
-    
-    var splitFunds = function(charge, platform, connected) {
-    			/* convert application fee from charge.presentmentCurrency to settlementcurrency */
-          /* so that we can take that amount away from the charge */
-          
-          
-          
-          // and we don't apply fx fee because we are just converting a number, not actual "money"
-          that.conversion = new Conversion(platform.platformFee, charge.presentmentCurrency, charge.settlementCurrency);
-          
-          that.applicationFee = that.conversion;
-          
-         var connectedPortion = that.charge.finalAmount.minus(that.applicationFee.settlementAmount);
-         
-         that.connectedPortion = new Funds(connectedPortion, charge.settlementCurrency);
-          console.log(that.conversion);
-          console.log("Connected Portion: " + that.connectedPortion.amount.toNumber());
-          
-          /* platform portion */
-          that.platformPortion =  new Decimal(that.applicationFee.settlementAmount);
-          that.platformPortion = that.platformPortion.minus(that.charge.stripeFee.amount);
-          that.platformPortion = new Funds(that.platformPortion, charge.settlementCurrency);
-          console.log("Platform Portion: "+  that.platformPortion.amount.toNumber());
-    };
-    
-    splitFunds(charge, platform, connected);
-
-    this.connectedPortionCurrency = connectedPortionCurrency();
-    this.platformPortionCurrency = platformPortionCurrency();
-    
-    
-    that.platformPortion.finalAmount = Math.round10(fx.convert(
-          	that.platformPortion.amount, {
-            		from: that.applicationFee.settlementCurrency,
-                to: that.platform.currency
-            }), -2);
-
-
-		 var multiplier = new Decimal(that.platform.pricing.fxPercent).times(0.01);
-            var multiplier = new Decimal(1).minus(multiplier);
-            
-            var x = new Decimal(that.platformPortion.finalAmount);
-
-            that.platformPortion.amountAfterFxFee = new Decimal(Math.round10(x.times(multiplier), -2));
-
-};
-
 
 var Pricing = function(pricing, country) {
+    var that = this;
     /* Accounts where Domestic means European */
     var europeanAccounts = [
         "AT",
@@ -393,82 +225,23 @@ var Pricing = function(pricing, country) {
     var transactionalFee = function(pricing) {
         var fees = pricing.split(" + ");
         var fee = Object.create(Pricing);
-        fee.percent = fees[0];
-        fee.fixed = fees[1];
+        fee.percent = new Decimal(fees[0]);
+        fee.percentMultiplier = fee.percent.times(0.01);
+        fee.fixed = new Money(fees[1], that.currency);
         return fee;
     };
 
     this.currency = pricing.currency;
-    this.fxPercent = pricing.fxPercent;
+    this.fxPercent = new Decimal(pricing.fxPercent);
+    this.fxMultiplier = this.fxPercent.times(0.01);
     this.domestic = new transactionalFee(pricing.domestic);
     this.international = new transactionalFee(pricing.international);
-
     this.european = europeanAccounts.includes(country);
 };
 
-var europeanCustomers = [
-    "AD",
-    "AT",
-    "BE",
-    "BG",
-    "HR",
-    "CY",
-    "CZ",
-    "DK",
-    "EE",
-    "FO",
-    "FI",
-    "FR",
-    "DE",
-    "GI",
-    "GR",
-    "GL",
-    "GG",
-    "VA",
-    "HU",
-    "IS",
-    "IE",
-    "IM",
-    "IL",
-    "IT",
-    "JE",
-    "LV",
-    "LI",
-    "LT",
-    "LU",
-    "MT",
-    "MC",
-    "ME",
-    "NL",
-    "NO",
-    "PL",
-    "RO",
-    "PM",
-    "SM",
-    "RS",
-    "SK",
-    "SI",
-    "ES",
-    "SJ",
-    "SE",
-    "CH",
-    "TR",
-    "UK",
-    "MK",
-    "PT",
-];
-
-
 var Country = function(countryCode, pricing) {
-
-
-    var that = this;
     this.code = countryCode;
-
-
-    this.pricing = new Pricing(pricing, that.code);
-
-    this.customer = new Customer(this.code);
+    this.pricing = new Pricing(pricing, countryCode);
 };
 
 var countries = {
@@ -624,196 +397,121 @@ var countries = {
     }),
 };
 
-console.log(countries);
+var stripeFee = function(presentment, pricing, chargeSettlement) {
+    this.pricing = pricing;
+    this.settledFixedFee = this.pricing.fixed.convertTo(chargeSettlement.currency);
+    this.settlement = chargeSettlement
+        .times(pricing.percentMultiplier)
+        .plus(this.settledFixedFee);
+}
 
+var Charge = function(amount, currency, customer, account, platform) {
+    var that = this;
+    this.presentment = new Money(amount, currency);
+    this.pricing = account.pricingFor(customer);
+    this.settlement = that.presentment.convertTo(account.currency);
 
-
-console.log(countries.GB);
-
-
-var Logger = function (directOrDestination) {
-		this.object = directOrDestination;
-    
-    var self = "Connected Account";
-    var other = "Platform";
-    
-		logString = "";
-    
-    /* Charge Breakdown */
-    logString += "\n Charge:";
-    logString += "\n - Presentment Amount: " + this.object.charge.presentmentAmount
-    		+ " " + this.object.charge.presentmentCurrency;
-    logString += "\n - Settlement Amount: " + this.object.charge.settlementAmount
-    		+ " " + this.object.charge.settlementCurrency;
-    logString += "\n - FX Fee: " + this.object.charge.fxFee
-    		+ " " + this.object.charge.settlementCurrency;
-    logString += "\n - Final Amount: " + this.object.charge.settlementAmount.minus(this.object.charge.fxFee)
-    		+ " " + this.object.charge.settlementCurrency;
-    logString += "\n - Pricing: " + this.object.charge.stripeFee.pricing.percent
-    		+ "% + " + this.object.charge.stripeFee.pricing.fixed
-        + " " + this.object.charge.stripeFee.passedInPricing.currency;
-    logString += "\n - Stripe Fee: " + this.object.charge.stripeFee.amount
-    		+ " " + this.object.charge.settlementCurrency
-        + " (" + this.object.charge.stripeFee.pricing.percent
-    		+ "% + " + this.object.charge.stripeFee.fixed 
-        + " " + this.object.charge.settlementCurrency
-        + " of " + this.object.charge.finalAmount 
-        + " " + this.object.charge.settlementCurrency + ")";
-        
-    /* Platform Breakdown */
-    logString += "\n \n Platform:"
-    + "\n - Country: " +this.object.platform.country.code
-    + "\n - Default Currency: "+ this.object.platform.currency
-    + "\n - Platform Fee: " + this.object.applicationFee.presentmentAmount 
-    + " " + this.object.applicationFee.presentmentCurrency
-    + " -------> " + this.object.applicationFee.settlementAmount 
-    + " " + this.object.applicationFee.settlementCurrency;
-    
-    logString += "\n \n Connected Account:"
-    + "\n - Country: " +this.object.connectedAccount.country.code
-    + "\n - Default Currency: "+ this.object.connectedAccount.currency;
-    
-    logString += "\n \n Customer:"
-    + "\n - Country: " +this.object.customer.card.country.code;
-    
-    logString += "\n \n Settle The Charge:"
-    + "\n 1. "  +this.object.charge.presentmentAmount
-    + " " + this.object.charge.presentmentCurrency
-    + " Charge created on " + self;
-    
-    /* Only show conversion if connected account needs it */
-    if(this.object.charge.presentmentCurrency !== this.object.charge.settlementCurrency) {
-          logString += "\n 1.a "  +this.object.charge.presentmentAmount
-          + " " + this.object.charge.presentmentCurrency
-          + " converted to " + this.object.charge.settlementAmount
-          + " " + this.object.charge.settlementCurrency
-          + "\n 1.b After "  +this.object.connectedAccount.pricing.fxPercent
-          + "% conversion fee, " + this.object.charge.finalAmount
-          + " " + this.object.charge.settlementCurrency
-          + " left over";
+    function settleFunds() {
+        if (that.presentment.currency !== account.currency) {
+            that.settlement = that.presentment.convertTo(account.currency);
+            that.fxFee = that.settlement.times(account.pricing.fxMultiplier);
+        } else {
+            that.settlement = that.presentment;
+            that.fxFee = new Money(0, that.settlement.currency);
+        }
+        that.final = that.settlement.minus(that.fxFee);
     }
-    
-    
- 
-    
-    /* Direct flow right now */
-    if (this.object.type === "direct") {
-    		   var multiplier = new Decimal(this.object.platform.pricing.fxPercent);
-    console.log("sdf" + multiplier);
-    var multiplier = multiplier.times(0.01);
-    
-            var multiplier = new Decimal(1).minus(multiplier);
-            
-            var appFee =new Decimal( this.object.applicationFee.finalAmount);
+    settleFunds();
 
-            var finalPlatformAmount = new Decimal(Math.round10(appFee.times(multiplier), -2));
-    
-    
-        logString += "\n \n Split Funds:"
-        + "\n 1. Stripe Fee of "  +this.object.charge.stripeFee.amount
-        + " " + this.object.charge.settlementCurrency
-        + " is taken, leaving " + this.object.amountMinusStripeFee
-        + " " + this.object.charge.settlementCurrency
-         + "\n 2. Application Fee of " 
-         + this.object.applicationFee.settlementAmount 
-        + " " + this.object.applicationFee.settlementCurrency
-        + " is sent to Platform, leaving " + 
-        + this.object.amountMinusStripeFee.minus(this.object.applicationFee.settlementAmount)
-        + " " + this.object.charge.settlementCurrency + " for Connected Account";
+    this.stripeFee = new stripeFee(that.presentment, that.pricing, that.final);
+}
 
-        /* Only show conversion if platform needs it */
-        if (this.object.platform.currency !== this.object.charge.settlementCurrency) {
-              logString += "\n 2.a  " 
-               + this.object.applicationFee.settlementAmount 
-              + " " + this.object.applicationFee.settlementCurrency
-              + " is converted to " + this.object.applicationFee.finalAmount
-              + " " + this.object.platform.currency
-              + "\n 2.b After " 
-               + this.object.platform.pricing.fxPercent 
-              + "% conversion fee, " + finalPlatformAmount
-              + " " +this.object.platform.currency + " left for Platform ";
+var Direct = function(charge, customer, account, platform) {
+    this.charge = charge;
+    this.platform = platform;
+    this.account = account;
+    this.customer = customer;
+    this.type = "direct";
+
+    this.amountAfterStripeFee = charge.final.minus(charge.stripeFee.settlement);
+    platform.applicationFee = new ApplicationFee(platform, charge, this.type);
+    this.connectedPortion = this.amountAfterStripeFee.minus(platform.applicationFee.settlement);
+}
+
+var Destination = function(charge, customer, account, platform) {
+    this.charge = charge;
+    this.platform = platform;
+    this.account = account;
+    this.customer = customer;
+    this.type = "destination";
+
+    platform.applicationFee = new ApplicationFee(platform, charge, this.type);
+    this.connectedPortion = this.charge.final.minus(platform.applicationFee.settlement);
+}
+
+
+var logger = function(direct) {
+    /* charge method? */
+    var logString = "Charge:";
+    logString += "\n Presentment: " + direct.charge.presentment
+    + "\n - Settlement: " + direct.charge.settlement
+    + "\n - Conversion Fee: " + direct.charge.fxFee
+    + "\n - Final: " + direct.charge.final
+    + "\n - Pricing: " + direct.charge.pricing.percent + "% + " + direct.charge.pricing.fixed
+    + "\n - Stripe Fee: " + direct.charge.stripeFee.settlement + " ("
+    + direct.charge.pricing.percent + "% + " + direct.charge.stripeFee.settledFixedFee + " of " + direct.charge.final + ")";
+    
+    logString += "\n\nPlatform:"
+    + "\n - Country: " + direct.platform.country
+    + "\n - Default Currency: " + direct.platform.currency
+    + "\n - Platform Fee: " + direct.platform.applicationFee.presentment + " ("
+    + direct.platform.applicationFee.settlement + ")";
+    
+    logString += "\n\nConnected Account:"
+    + "\n - Country: " + direct.account.country
+    + "\n - Default Currency: "+  direct.account.currency;
+    
+    logString += "\n\nCustomer:"
+    + "\n - Country: " + direct.customer.country;
+
+    logString += "\n\nSettle The Charge:"
+    + "\n1. " + direct.charge.presentment + " Charge created on Connected Account";
+    if (direct.charge.presentment.currency !== direct.charge.settlement.currency) {
+        logString += "\n1a. " + direct.charge.presentment + " converted to " + direct.charge.settlement
+        + "\n1b. After " + direct.account.pricing.fxPercent + "% conversion fee, " + direct.charge.final + " left over";
+    }
+
+
+    if (direct.type === "direct") {
+        logString += "\n\nSplit Finds (Direct Charge):"
+        + "\n1. Stripe Fee of " + direct.charge.stripeFee.settlement + " is taken, leaving " + direct.amountAfterStripeFee
+        + "\n2. Application Fee of " + direct.platform.applicationFee.settlement + " is sent to platform, leaving " + direct.connectedPortion + " for Connected Account";
+
+        if (direct.charge.settlement.currency !== direct.platform.currency) {
+            logString += "\n2a. " + direct.platform.applicationFee.settlement + " converted to " + direct.platform.applicationFee.final
+            + "\n2b. After " + direct.platform.pricing.fxPercent + "% conversion fee, " + direct.platform.applicationFee.finalAfterFxFee + " left for Platform";
+        }
+    } /* destination */
+    else {
+    		logString += "\n\nSplit Finds (Destination Charge):"
+        + "\n1. " + direct.connectedPortion + " is sent to Connected Account, leaving " + direct.platform.applicationFee.settlement + " for Platform"
+        + "\n2. Stripe Fee of " + direct.charge.stripeFee.settlement + " is taken from Platform, leaving " + direct.platform.applicationFee.afterStripeFee + " for Platform";
+
+        if (direct.charge.settlement.currency !== direct.platform.currency) {
+            logString+= "\n2a. " + direct.platform.applicationFee.afterStripeFee + " converted to " + direct.platform.applicationFee.final
+           + "\n2b. After " + direct.platform.pricing.fxPercent + "% conversion fee, " + direct.platform.applicationFee.finalAfterFxFee + " left for Platform";
         }
     }
-    /* Destination Flow */
-    else {
-    		logString += "\n \n Split Funds:";
-    		logString += "\n 1. " + this.object.connectedPortion.amount + " " 
-        + this.object.charge.settlementCurrency + 
-        " is sent to Connected Account, leaving " + 
-         this.object.applicationFee.settlementAmount + " " + this.object.charge.settlementCurrency +  " for Platform"
-         + "\n 2. Stripe Fee of " + this.object.charge.stripeFee.amount + 
-         " " + this.object.charge.settlementCurrency + 
-         " is taken from Platform, leaving " + 
-         this.object.platformPortion.amount + " " +
-         this.object.settlementCurrency + " for Platform";
-    
-    		/* Only show conversion if platform needs it */
-        if (this.object.platform.currency !== this.object.charge.settlementCurrency) {
-        	/* TODO */
-        	logString += "\n 2.a "
-          + this.object.platformPortion.amount + " " +
-         this.object.settlementCurrency + " is converted to "
-         + this.object.platformPortion.finalAmount + " " +
-         this.object.platform.currency;
-         
-         logString += "\n 2.b After "
-          + this.object.platform.pricing.fxPercent + "% conversion fee, " 				+ this.object.platformPortion.amountAfterFxFee + " " + this.object.platform.currency + " left for Platform";
-    		
-    	}
-    }
-    
-	this.logString = logString;
-}; 
 
 
+	this.toString = function() {
+  	return logString;
+  };
 
-/*rates to global fx object */
-loadRates();
 
+};
 
-/*  wait till we have response from api*/
-setTimeout(function() {
-		/*Everything the same */
-   //var customer = new Customer("US","USD");
-   //var platform = new Platform("US", "USD", 10);
-  //var connected = new Account("US", "USD");
-   //charge = new Charge(100, "USD", connected, customer);
-		
-    /* Simple currency conversion each step */
-    //var customer = new Customer("FR", "EUR");
-   //var platform = new Platform("US", "USD", 10);
-    //var connected = new Account("GB", "GBP");
-    //var charge = new Charge(100, "EUR", connected, customer);
-    
-    /* test connected currency !== pricing currency */
-    //var customer = new Customer("FR", "EUR");
-    //var platform = new Platform("US", "USD", 10);
-    //var connected = new Account("GB", "NOK");
-  	//var charge = new Charge(100, "EUR", connected, customer);
-    
-    //s = new Direct(platform, connected, customer, charge);
-   	//t = new Destination(platform, connected, customer, charge);
-    /* 
-    console.log(customer);
-    console.log(platform);
-    console.log(connected);
-    console.log(charge);
-    
-    console.log("Direct");
-    console.log(s);
-    
-    console.log("Destination");
-    console.log(t);
-    
-    console.log("------------- Direct -----------");
-    console.log(new Logger(s).logString);
-    console.log("------------- Destination -----------");
-    console.log(new Logger(t).logString); */
-   // alert("ready");
-  
-}, 10000);
-
-function getUserInput() {
+function chargeFromInput() {
 	var a = $('#customer-card').val();
   var b = $('#connected-country').val();
   var c = $('#connected-currency').val();
@@ -823,38 +521,29 @@ function getUserInput() {
   var g = $('#charge-amount').val();
   var h = $('#charge-currency').val();
   
-      /* amount to percent */ 
-      /* a function that can go in Direct or Dest. Charge? */
-	 var percentMultiplier = new Decimal(f).times(0.01);
-   f = percentMultiplier.times(g); 
-   f = Math.ceil10(f, -2);
-  
-  var customer = new Customer(a, "N/A");
-    var connected = new Account(b, c);
-    var platform = new Platform(d, e, f);
-  	var charge = new Charge(g, h, connected, customer);
+  var customer = new Customer(a);
+  var connected = new Account(b, c);
+  var platform = new Platform(d, e, f);
+  var charge = new Charge(g, h,customer, connected, platform );
     
-		var s;
+		var connectCharge;
     var flow = $('input[name=flow]:checked').val();
     if (flow === "Direct"){
-    	s = new Direct(platform, connected, customer, charge);
+    	connectCharge = new Direct(charge, customer, connected, platform);
     }
     else {
-    	s = new Destination(platform, connected, customer, charge);
+    	connectCharge = new Destination(charge, customer, connected, platform);
     }
    	
+  connectCharge.log = new logger(connectCharge);
   
-  var y = new Logger(s);
-  
-  return y;
+  return connectCharge;
   
 }
 
 // Calculate button callback
 $('#calculateButton').on('click', function () {
-    var y = getUserInput();
-    $('#outcome').val(y.logString);
+    var y = new chargeFromInput();
+    $('#outcome').val(y.log);
     $('#outcome').css("display", "block");
 });
-
-
