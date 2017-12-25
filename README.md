@@ -6,10 +6,6 @@ A tool that is based on Stripe Documentation and API behavior, breaking down the
 - Direct
 - Destination
 - Separate Charges and Transfers
-
-- Uses OpenExchangeRates for currency conversion rates
-- Uses Money.js for conversion
-- Uses Decimal.js for high accuracy decimal calculations
  
 
 ## Standard Charge
@@ -35,6 +31,14 @@ Essentially a Standard charge that, like Destination charges, won't be converted
 
 Since the disbursement of separate charges and transfers is variable and relies on future action from the platform, the pricing quirk is largely what earns its place in the breakdown tool.
 
+
+# Dependencies
+
+- Uses OpenExchangeRates (with Money.js http://openexchangerates.github.io/money.js/) for currency conversion rates https://openexchangerates.org/
+- Uses Decimal.js for high accuracy decimal calculations https://github.com/MikeMcl/decimal.js/
+
 ## Use Here
 
 https://jsfiddle.net/0gczse8p/58/show
+
+
