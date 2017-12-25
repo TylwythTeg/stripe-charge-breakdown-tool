@@ -4,12 +4,19 @@ html {
   font-family: sans-serif;
 }
 
+select {
+  height: 26px;
+}
+
+
+
 .stripe {
   color: rgb(82, 149, 196);
 }
 
 .platform {
   color: rgb(201, 76, 92);
+  color: rgb(104, 39, 46);
 }
 
 h3 {
@@ -26,8 +33,6 @@ input[type="radio"] {
   -moz-appearance: none;
   appearance: none;
   border-radius: 50%;
-  width: 16px;
-  height: 16px;
   border: 0.5px solid #999;
   transition: 0.2s all linear;
   outline: none;
@@ -39,31 +44,46 @@ input[type="radio"] {
 }
 
 input[type="radio"]:checked+label{ 
-background-color: rgb(65, 173, 142); 
+background-color: rgba(52, 49, 61,0.75); 
 color: rgb(244, 244, 244);
+  height: 20%;
 }
 
 input[type="radio"]:checked:hover+label{ 
-background-color: rgb(65, 173, 142); 
+background-color: rgba(52, 49, 61,0.75);
 color: rgb(244, 244, 244);
 } 
 
 
 input[type="radio"] + label {
   padding:4px 8px;
-  color: rgb(132, 132, 132);
+  color: rgb(244, 244, 244);
+  margin-top: 12px;
   margin-right: 15px;
+  display: inline-block;
   line-height: 32px;
+  width: 14%;
+}
+
+.flow-form {
+  display: block;
+}
+input[type="radio"] + label:first-child{
+ display: block;
+}
+
+input[type="radio"] + label:last-child{
+ width: 26.5%;
 }
 
 input[type="radio"] + label:hover { 
-    background-color: rgb(82, 149, 196);
+    background-color: rgba(52, 49, 61,0.4);
     color: rgb(244, 244, 244);
     cursor: pointer;
 }
 
 input[type="radio"] + label:active {
-     background-color: rgb(57, 107, 142);
+     background-color: rgba(52, 49, 61,0.75);
 }
 
 input[type="text"] {
@@ -72,6 +92,7 @@ input[type="text"] {
     padding: 6px 10px;
     box-sizing: border-box;
      display: block;
+     height: 28px;
 }
 
 input[type="text"] + label{
@@ -79,7 +100,13 @@ input[type="text"] + label{
     text-align: left;
 }
 
+#button_div {
+  width: 360px;
+}
+
 button {
+  margin: 0 auto;
+  margin-left: 114.645px;
     background-color: #008CBA;
     border: none;
     color: white;
@@ -119,26 +146,80 @@ button:focus {
 h4 {
   font-size: 22px;
   color: rgb(44, 79, 81);
+  //text-align: center;
 }
 
 .group-options {
   background-color: rgba(57, 142, 115,0.5);
-  padding: 1px 40px 20px 20px;
+  padding: 1px 40px 16px 20px;
   
   width: 300px;
   margin-bottom: 20px;
  
   
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+   border-bottom-left-radius: 6px;
+  border-bottom-right-radius: 6px;
 }
+.group-options  {
+  display: block;
+  margin-bottom: 10px;
+  margin-top: 16px;;
+  
+}
+
 .group-options * {
   display: block;
   margin-bottom: 10px;
   
 }
-
 .group-options label span{
   display: inline;
 }
 
 .group-options label{
   color: white;
+  
+}
+
+.connected-form {
+  background-color: rgba(57, 123, 142, 0.5);
+}
+
+.connected-form h4 {
+  color: rgb(37, 81, 94);
+}
+
+.platform-form {
+   background-color: rgba(142, 57, 66, 0.5);
+}
+
+.platform-form input[type="text"] {
+  width: 40%;
+}
+
+.platform-form h4 {
+  color: rgb(104, 39, 46);
+}
+
+.charge-form input[type="text"]{
+  display: inline-block;
+  width: 40%;
+  margin-top: 0;
+}
+.charge-form select{
+  display: inline-block;
+  clear: right;
+}
+
+.charge-form {
+    padding-bottom: 2px;
+}
+.charge-form {
+  background-color: rgba(124, 119, 142,0.75);
+}
+
+.charge-form h4 {
+  color:rgb(52, 49, 61);
+}

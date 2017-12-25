@@ -261,6 +261,7 @@ var Direct = function(platform, connected, customer, charge) {
           that.applicationFee = that.conversion;
           console.log("APP FEE " + that.applicationFee.settlementAmount);
           
+        
           that.applicationFee.finalAmount = Math.round10(fx.convert(
           	that.applicationFee.settlementAmount, {
             		from: that.applicationFee.settlementCurrency,
@@ -700,6 +701,7 @@ var Logger = function (directOrDestination) {
     		   var multiplier = new Decimal(this.object.platform.pricing.fxPercent);
     console.log("sdf" + multiplier);
     var multiplier = multiplier.times(0.01);
+    
             var multiplier = new Decimal(1).minus(multiplier);
             
             var appFee =new Decimal( this.object.applicationFee.finalAmount);
@@ -768,6 +770,49 @@ var Logger = function (directOrDestination) {
 /*rates to global fx object */
 loadRates();
 
+
+/*  wait till we have response from api*/
+setTimeout(function() {
+		/*Everything the same */
+   //var customer = new Customer("US","USD");
+   //var platform = new Platform("US", "USD", 10);
+  //var connected = new Account("US", "USD");
+   //charge = new Charge(100, "USD", connected, customer);
+		
+    /* Simple currency conversion each step */
+    //var customer = new Customer("FR", "EUR");
+   //var platform = new Platform("US", "USD", 10);
+    //var connected = new Account("GB", "GBP");
+    //var charge = new Charge(100, "EUR", connected, customer);
+    
+    /* test connected currency !== pricing currency */
+    //var customer = new Customer("FR", "EUR");
+    //var platform = new Platform("US", "USD", 10);
+    //var connected = new Account("GB", "NOK");
+  	//var charge = new Charge(100, "EUR", connected, customer);
+    
+    //s = new Direct(platform, connected, customer, charge);
+   	//t = new Destination(platform, connected, customer, charge);
+    /* 
+    console.log(customer);
+    console.log(platform);
+    console.log(connected);
+    console.log(charge);
+    
+    console.log("Direct");
+    console.log(s);
+    
+    console.log("Destination");
+    console.log(t);
+    
+    console.log("------------- Direct -----------");
+    console.log(new Logger(s).logString);
+    console.log("------------- Destination -----------");
+    console.log(new Logger(t).logString); */
+   // alert("ready");
+  
+}, 10000);
+
 function getUserInput() {
 	var a = $('#customer-card').val();
   var b = $('#connected-country').val();
@@ -778,27 +823,37 @@ function getUserInput() {
   var g = $('#charge-amount').val();
   var h = $('#charge-currency').val();
   
-
+      /* amount to percent */ 
+      /* a function that can go in Direct or Dest. Charge? */
+	 var percentMultiplier = new Decimal(f).times(0.01);
+   f = percentMultiplier.times(g); 
+   f = Math.ceil10(f, -2);
   
-  var customer = new Customer("N/A", a);
+  var customer = new Customer(a, "N/A");
     var connected = new Account(b, c);
     var platform = new Platform(d, e, f);
   	var charge = new Charge(g, h, connected, customer);
     
-    s = new Direct(platform, connected, customer, charge);
-   	t = new Destination(platform, connected, customer, charge);
+		var s;
+    var flow = $('input[name=flow]:checked').val();
+    if (flow === "Direct"){
+    	s = new Direct(platform, connected, customer, charge);
+    }
+    else {
+    	s = new Destination(platform, connected, customer, charge);
+    }
+   	
   
   var y = new Logger(s);
-  var z = new Logger(t);
   
-  return {y: y, z: z};
+  return y;
   
 }
 
 // Calculate button callback
 $('#calculateButton').on('click', function () {
-    var ob = getUserInput();
-    $('#outcome').val("\n ---------Direct: \n \n " + ob.y.logString + "\n \n ----------Destination: \n \n" + ob.z.logString);
+    var y = getUserInput();
+    $('#outcome').val(y.logString);
     $('#outcome').css("display", "block");
 });
 
