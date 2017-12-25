@@ -150,11 +150,17 @@
      </select>
      
    <div class = "flow-form">
-     <input id ="direct_button"type="radio" name="flow" value="Direct" checked>
+     <input id = "standard_button"type="radio"name="flow" value="Standard" checked>
+    <label  class = "db" for="standard_button">Standard</label>
+    
+     <input id ="direct_button"type="radio" name="flow" value="Direct">
     <label for="direct_button">Direct</label>
 
     <input id = "destination_button"type="radio"name="flow" value="Destination">
     <label class = "db" for="destination_button">Destination</label>
+    
+    <input id = "sct_button"type="radio"name="flow" value="SCT">
+    <label title="Separate Charges and Transfers" class = "db" for="sct_button">SCT</label>
    </div>
    
 </form>
@@ -563,7 +569,7 @@
 <!-- Connected Options -->
 <form class = "connected-form group-options">
   <div>
-      <h4>Connected Account</h4>
+      <h4>Account</h4>
       <label for="connected-account-country">Country</label>
       <select id = "connected-country" name="connected-account-country">
           <option value="AU">Australia</option>
