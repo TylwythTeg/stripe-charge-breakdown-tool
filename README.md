@@ -9,4 +9,4 @@ Breaks down these charges to illustrate the flow of funds:
 
 ## Use Here
 
-http://jsfiddle.net/5cdzoy53/15/
+http://jsfiddle.net/5cdzoy53/15/show
