@@ -14,24 +14,30 @@ function decimalAdjust(t,e,i){return void 0===i||0==+i?Math[t](e):(e=+e,i=+i,isN
 /* load rates from OpenExchange */
 function loadRates() {
     // Load exchange rates data via AJAX:
-    $.getJSON(
-        // NB: using Open Exchange Rates here, but you can use any source!
-        'https://openexchangerates.org/api/latest.json?app_id=7882ce077d9e44229e7b68b170ad47f9',
-        function(data) {
-            // Check money.js has finished loading:
-            if (typeof fx !== "undefined" && fx.rates) {
-                fx.rates = data.rates;
-                fx.base = data.base;
-            } else {
-                // If not, apply to fxSetup global:
-                var fxSetup = {
-                    rates: data.rates,
-                    base: data.base
-                }
-
+    var request = new XMLHttpRequest();
+    var url = "https://openexchangerates.org/api/latest.json?app_id=7882ce077d9e44229e7b68b170ad47f9";
+    request.open('GET', url, true);
+    request.onload = function() {
+      if (request.status >= 200 && request.status < 400) {
+      	var data = JSON.parse(request.responseText);
+        /* Check if Money.js is set up already */
+        if (typeof fx !== "undefined" && fx.rates) {
+                  fx.rates = data.rates;
+                  fx.base = data.base;
+        } else {
+          // If not, apply to fxSetup global:
+            var fxSetup = {
+              rates: data.rates,
+              base: data.base
             }
-        }
-    );
+          }
+      }
+    };
+    request.onerror = function() {
+       // There was a connection error of some sort
+       alert("Error loading conversion rates");
+    };
+		request.send();
 }
 loadRates();
 
@@ -511,39 +517,61 @@ var logger = function(direct) {
 
 };
 
-function chargeFromInput() {
-	var a = $('#customer-card').val();
-  var b = $('#connected-country').val();
-  var c = $('#connected-currency').val();
-  var d = $('#platform-country').val();
-  var e = $('#platform-currency').val();
-  var f = $('#platform-fee').val();
-  var g = $('#charge-amount').val();
-  var h = $('#charge-currency').val();
-  
-  var customer = new Customer(a);
-  var connected = new Account(b, c);
-  var platform = new Platform(d, e, f);
-  var charge = new Charge(g, h,customer, connected, platform );
-    
-		var connectCharge;
-    var flow = $('input[name=flow]:checked').val();
-    if (flow === "Direct"){
-    	connectCharge = new Direct(charge, customer, connected, platform);
-    }
-    else {
-    	connectCharge = new Destination(charge, customer, connected, platform);
-    }
-   	
-  connectCharge.log = new logger(connectCharge);
-  
-  return connectCharge;
-  
+function getInputElements() {
+	return {
+  		customerCard: document.getElementById("customer-card"),
+      connectedCountry: document.getElementById("connected-country"),
+      connectedCurrency: document.getElementById("connected-currency"),
+      platformCountry: document.getElementById("platform-country"),
+      platformCurrency: document.getElementById("platform-currency"),
+      platformFee: document.getElementById("platform-fee"),
+      chargeAmount: document.getElementById("charge-amount"),
+      chargeCurrency: document.getElementById("charge-currency"),
+      calculateButton: document.getElementById("calculateButton"),
+      directButton: document.getElementById("direct_button"),
+      outcome: document.getElementById("outcome"),
+  };
 }
 
-// Calculate button callback
-$('#calculateButton').on('click', function () {
-    var y = new chargeFromInput();
-    $('#outcome').val(y.log);
-    $('#outcome').css("display", "block");
-});
+window.onload = function() {
+		var elements = getInputElements();
+    console.log(elements);
+    
+    function chargeFromInput() {
+    		var a = elements.customerCard.value;
+        var b = elements.connectedCountry.value;
+        var c = elements.connectedCurrency.value;
+        var d = elements.platformCountry.value;
+        var e = elements.platformCurrency.value;
+        var f = elements.platformFee.value;
+        var g = elements.chargeAmount.value;
+        var h = elements.chargeCurrency.value;
+
+        var customer = new Customer(a);
+        var connected = new Account(b, c);
+        var platform = new Platform(d, e, f);
+        var charge = new Charge(g, h,customer, connected, platform );
+        var connectCharge;
+        
+        //var flow = $('input[name=flow]:checked').val();
+        var flow = elements.directButton.checked ? "Direct" : "Destination";
+        if (flow === "Direct"){
+          connectCharge = new Direct(charge, customer, connected, platform);
+        }
+        else {
+          connectCharge = new Destination(charge, customer, connected, platform);
+        }
+
+        connectCharge.log = new logger(connectCharge);
+
+        return connectCharge;
+    }
+    
+    // Calculate button callback
+    elements.calculateButton.addEventListener('click', function () {
+        var y = new chargeFromInput();
+        elements.outcome.value = y.log;
+        elements.outcome.style.display = "block";
+    });
+    
+};
