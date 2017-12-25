@@ -29,7 +29,7 @@ The final charge amount, minus the application fee, is sent to the Connected acc
 
 Essentially a Standard charge that, like Destination charges, won't be converted for the platform until bank payout time. Using `on_behalf_of` settles the charge using the currency of the connected account and uses the connected account's pricing just as in Direct and Destination charges. However, whether domestic or international pricing is used depends on the relationship between the customer's country and the platform's country, not the customer's and the connected account's.
 
-Since the disbursement of separate charges and transfers is variable and relies on future action from the platform, the pricing quirk is largely what earns its place in the breakdown tool.
+Since the disbursement of separate charges and transfers is variable and relies on future action from the platform, this pricing quirk is largely what earns its place in the breakdown tool.
 
 
 # Dependencies
