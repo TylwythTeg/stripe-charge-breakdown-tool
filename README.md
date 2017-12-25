@@ -23,7 +23,7 @@ The Stripe fee is taken on the final settled charge amount after any conversion 
 
 ## Destination
 
-The final charge amount, minus the application fee, is sent to the Connected account. The Stripe fee is taken from the platform's portion. Actual Stripe behavior means that the platform's portion is unconverted, but conversion will most likely need to take place inveitable, so for the purposes of the tool included what this conversion would look like if it took place immediately.
+The final charge amount, minus the application fee, is sent to the Connected account. The Stripe fee is taken from the platform's portion. Actual Stripe behavior means that the platform's portion is unconverted, but conversion will most likely need to take place invevitably, so for the purposes of the tool, included is what this conversion would look like if it took place immediately.
 
 ## SCT
 
