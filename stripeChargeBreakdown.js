@@ -9,8 +9,6 @@
 function decimalAdjust(t,e,i){return void 0===i||0==+i?Math[t](e):(e=+e,i=+i,isNaN(e)||"number"!=typeof i||i%1!=0?NaN:e<0?-decimalAdjust(t,-e,i):(e=e.toString().split("e"),e=Math[t](+(e[0]+"e"+(e[1]?+e[1]-i:-i))),+((e=e.toString().split("e"))[0]+"e"+(e[1]?+e[1]+i:i))))}Math.ceil10||(Math.ceil10=function(t,e){return decimalAdjust("ceil",t,e)}),Math.round10||(Math.round10=function(t,e){return decimalAdjust("round",t,e)});
 /* Math.round ceil10 round10 https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/round */
 
-/* -------------------------------------------------------------------------- */
-
 /* load rates from OpenExchange */
 function loadRates() {
     // Load exchange rates data via AJAX:
@@ -18,26 +16,26 @@ function loadRates() {
     var url = "https://openexchangerates.org/api/latest.json?app_id=7882ce077d9e44229e7b68b170ad47f9";
     request.open('GET', url, true);
     request.onload = function() {
-      if (request.status >= 200 && request.status < 400) {
-      	var data = JSON.parse(request.responseText);
-        /* Check if Money.js is set up already */
-        if (typeof fx !== "undefined" && fx.rates) {
-                  fx.rates = data.rates;
-                  fx.base = data.base;
-        } else {
-          // If not, apply to fxSetup global:
-            var fxSetup = {
-              rates: data.rates,
-              base: data.base
+        if (request.status >= 200 && request.status < 400) {
+            var data = JSON.parse(request.responseText);
+            /* Check if Money.js is set up already */
+            if (typeof fx !== "undefined" && fx.rates) {
+                fx.rates = data.rates;
+                fx.base = data.base;
+            } else {
+                // If not, apply to fxSetup global:
+                var fxSetup = {
+                    rates: data.rates,
+                    base: data.base
+                }
             }
-          }
-      }
+        }
     };
     request.onerror = function() {
-       // There was a connection error of some sort
-       alert("Error loading conversion rates");
+        // There was a connection error of some sort
+        alert("Error loading conversion rates");
     };
-		request.send();
+    request.send();
 }
 loadRates();
 
@@ -87,8 +85,7 @@ var Money = function(amount, currency) {
                 if (money.hasOwnProperty("amount")) {
                     var amount = that.amount[method](money.amount);
                     return new Money(amount, that.currency);
-                }
-                else {
+                } else {
                     var amount = that.amount[method](money);
                     return new Money(amount, that.currency);
                 }
@@ -146,7 +143,7 @@ var Customer = function(cardCountry) {
         "SE",
         "CH",
         "TR",
-        "UK",
+        "GB",
         "MK",
         "PT",
     ];
@@ -163,7 +160,7 @@ var Account = function(country, currency) {
     this.hasDomesticPricingFor = function(customer) {
         return ((that.country === customer.country) || (that.pricing.european && customer.european));
     };
-    
+
     this.pricingFor = function(customer) {
         if (that.hasDomesticPricingFor(customer)) {
             return that.pricing.domestic;
@@ -180,34 +177,34 @@ var Platform = function(country, currency, feePercent) {
     this.feePercent = new Decimal(feePercent);
     this.feeMultiplier = this.feePercent.times(0.01);
     this.pricing = countries[country].pricing;
-    
+
     this.hasDomesticPricingFor = function(customer) {
         return ((that.country === customer.country) || (that.pricing.european && customer.european));
     };
 };
 
 var Charge = (function() {
-		var that = this;
-    
+    var that = this;
+
     function connectCharge(type) {
-    		return type !== "Standard";
+        return type !== "Standard";
     }
-    
+
     function getPricing() {
-    		/* SCTs use pricing of connected account like normal */
+        /* SCTs use pricing of connected account like normal */
         /* However, domestic vs.international logical choice depends on Platform */
-    		if (this.type === "SCT") {
-        		if(this.platform.hasDomesticPricingFor(this.customer)) {
-            		return this.account.pricing.domestic;
+        if (this.type === "SCT") {
+            if (this.platform.hasDomesticPricingFor(this.customer)) {
+                return this.account.pricing.domestic;
             } else {
-            		return this.account.pricing.international;
+                return this.account.pricing.international;
             }
         } else {
-        		console.log(this);
-        		return this.account.pricingFor(this.customer);
+            console.log(this);
+            return this.account.pricingFor(this.customer);
         }
     }
-    
+
     function settleFunds() {
         if (this.presentment.currency !== this.account.currency) {
             this.settlement = this.presentment.convertTo(this.account.currency);
@@ -219,55 +216,55 @@ var Charge = (function() {
         this.final = this.settlement.minus(this.fxFee);
         this.stripeFee = new stripeFee(this.presentment, this.pricing, this.final);
     }
-    
+
     function initializeCharge(options) {
-    		this.options = options;
+        this.options = options;
         this.customer = new Customer(options.customer.country, options.customer.currency);
         this.account = new Account(options.account.country, options.account.currency);
-        
+
         if (connectCharge(this.type)) {
-        		this.platform = new Platform(options.platform.country, options.platform.currency, options.platform.percentFee);
+            this.platform = new Platform(options.platform.country, options.platform.currency, options.platform.percentFee);
         }
-    		this.pricing = getPricing.call(this, options.type);
-    		this.presentment = new Money(options.amount, options.currency);
-    		this.settlement = this.presentment.convertTo(options.account.currency);
+        this.pricing = getPricing.call(this, options.type);
+        this.presentment = new Money(options.amount, options.currency);
+        this.settlement = this.presentment.convertTo(options.account.currency);
     }
 
-		this.Direct = function(options) {
-    		this.type = "Direct";
-    		initializeCharge.call(this, options);
+    this.Direct = function(options) {
+        this.type = "Direct";
+        initializeCharge.call(this, options);
         settleFunds.call(this);
-        
+
         this.amountAfterStripeFee = this.final.minus(this.stripeFee.settlement);
-    		this.platform.applicationFee = new ApplicationFee(this.platform, this, this.type);
-    		this.connectedPortion = this.amountAfterStripeFee.minus(this.platform.applicationFee.settlement);
-    };
-    
-    this.Destination = function(options) {
-    		this.type = "Destination";
-    		initializeCharge.call(this, options);
-        settleFunds.call(this);
-        
         this.platform.applicationFee = new ApplicationFee(this.platform, this, this.type);
-    		this.connectedPortion = this.final.minus(this.platform.applicationFee.settlement);
+        this.connectedPortion = this.amountAfterStripeFee.minus(this.platform.applicationFee.settlement);
     };
-    
+
+    this.Destination = function(options) {
+        this.type = "Destination";
+        initializeCharge.call(this, options);
+        settleFunds.call(this);
+
+        this.platform.applicationFee = new ApplicationFee(this.platform, this, this.type);
+        this.connectedPortion = this.final.minus(this.platform.applicationFee.settlement);
+    };
+
     this.SCT = function(options) {
-    		this.type = "SCT";
+        this.type = "SCT";
         initializeCharge.call(this, options);
         settleFunds.call(this);
         /* What happens left is up to user. Transfer() methods for some reason? */
     };
-    
+
     this.Standard = function(options) {
-    		this.type = "Standard";
-    		initializeCharge.call(this, options);
+        this.type = "Standard";
+        initializeCharge.call(this, options);
         settleFunds.call(this);
-        
+
         this.finalAfterStripeFee = this.final.minus(this.stripeFee.settlement);
     };
-    
-		return this;
+
+    return this;
 })();
 
 var ApplicationFee = function(platform, charge, type) {
@@ -286,7 +283,7 @@ var ApplicationFee = function(platform, charge, type) {
     }
 
     this.final = this.afterStripeFee.convertTo(platform.currency);
-    
+
     if (platform.currency !== charge.settlement.currency) {
         this.fxFee = this.final.times(platform.pricing.fxMultiplier);
         this.finalAfterFxFee = this.final.minus(this.fxFee);
@@ -379,7 +376,7 @@ var countries = {
         domestic: "1.4 + 1.80",
         international: "2.9 + 1.80",
         fxPercent: 2,
-        currency: "EUR"
+        currency: "DKK"
     }),
     FI: new Country("FI", {
         domestic: "1.4 + 0.25",
@@ -502,228 +499,140 @@ var stripeFee = function(presentment, pricing, chargeSettlement) {
 
 
 
-
 var logger = function(direct) {
     /* charge method? */
     var logString = "Charge:";
-    logString += "\n Presentment: " + direct.presentment
-    + "\n - Settlement: " + direct.settlement
-    + "\n - Conversion Fee: " + direct.fxFee
-    + "\n - Final: " + direct.final
-    + "\n - Pricing: " + direct.pricing.percent + "% + " + direct.pricing.fixed
-    + "\n - Stripe Fee: " + direct.stripeFee.settlement + " ("
-    + direct.pricing.percent + "% + " + direct.stripeFee.settledFixedFee + " of " + direct.final + ")";
-    
-    if (direct.type === "Destination" || direct.type === "Direct") {
-        logString += "\n\nPlatform:"
-        + "\n - Country: " + direct.platform.country
-        + "\n - Default Currency: " + direct.platform.currency
-        + "\n - Platform Fee: " + direct.platform.applicationFee.presentment + " ("
-        + direct.platform.applicationFee.settlement + ")";
-    }
-    
-    logString += "\n\nConnected Account:"
-    + "\n - Country: " + direct.account.country
-    + "\n - Default Currency: "+  direct.account.currency;
-    
-    logString += "\n\nCustomer:"
-    + "\n - Country: " + direct.customer.country;
+    logString += "\n - Presentment: " + direct.presentment +
+        "\n - Settlement: " + direct.settlement +
+        "\n - Conversion Fee: " + direct.fxFee +
+        "\n - Final: " + direct.final +
+        "\n - Pricing: " + direct.pricing.percent + "% + " + direct.pricing.fixed +
+        "\n - Stripe Fee: " + direct.stripeFee.settlement + " (" +
+        direct.pricing.percent + "% + " + direct.stripeFee.settledFixedFee + " of " + direct.final + ")";
 
-    logString += "\n\nSettle The Charge:"
-    + "\n1. " + direct.presentment + " Charge created on Connected Account";
+    if (direct.type === "Destination" || direct.type === "Direct") {
+        logString += "\n\nPlatform:" +
+            "\n - Country: " + direct.platform.country +
+            "\n - Default Currency: " + direct.platform.currency +
+            "\n - Platform Fee: " + direct.platform.applicationFee.presentment + " (" +
+            direct.platform.applicationFee.settlement + ")";
+    }
+
+    logString += "\n\nConnected Account:" +
+        "\n - Country: " + direct.account.country +
+        "\n - Default Currency: " + direct.account.currency;
+
+    logString += "\n\nCustomer:" +
+        "\n - Country: " + direct.customer.country;
+
+    logString += "\n\nSettle The Charge:" +
+        "\n1. " + direct.presentment + " Charge created on Connected Account";
     if (direct.presentment.currency !== direct.settlement.currency) {
-        logString += "\n1a. " + direct.presentment + " converted to " + direct.settlement
-        + "\n1b. After " + direct.account.pricing.fxPercent + "% conversion fee, " + direct.final + " left over";
+        logString += "\n1a. " + direct.presentment + " converted to " + direct.settlement +
+            "\n1b. After " + direct.account.pricing.fxPercent + "% conversion fee, " + direct.final + " left over";
     }
 
 
     if (direct.type === "Direct") {
-        logString += "\n\nSplit Funds (Direct Charge):"
-        + "\n1. Stripe Fee of " + direct.stripeFee.settlement + " is taken, leaving " + direct.amountAfterStripeFee
-        + "\n2. Application Fee of " + direct.platform.applicationFee.settlement + " is sent to platform, leaving " + direct.connectedPortion + " for Connected Account";
+        logString += "\n\nSplit Funds (Direct Charge):" +
+            "\n1. Stripe Fee of " + direct.stripeFee.settlement + " is taken, leaving " + direct.amountAfterStripeFee +
+            "\n2. Application Fee of " + direct.platform.applicationFee.settlement + " is sent to platform, leaving " + direct.connectedPortion + " for Connected Account";
 
         if (direct.settlement.currency !== direct.platform.currency) {
-            logString += "\n2a. " + direct.platform.applicationFee.settlement + " converted to " + direct.platform.applicationFee.final
-            + "\n2b. After " + direct.platform.pricing.fxPercent + "% conversion fee, " + direct.platform.applicationFee.finalAfterFxFee + " left for Platform";
+            logString += "\n2a. " + direct.platform.applicationFee.settlement + " converted to " + direct.platform.applicationFee.final +
+                "\n2b. After " + direct.platform.pricing.fxPercent + "% conversion fee, " + direct.platform.applicationFee.finalAfterFxFee + " left for Platform";
         }
     } /* destination */
-    else if (direct.type === "Destination"){
-    		logString += "\n\nSplit Finds (Destination Charge):"
-        + "\n1. " + direct.connectedPortion + " is sent to Connected Account, leaving " + direct.platform.applicationFee.settlement + " for Platform"
-        + "\n2. Stripe Fee of " + direct.stripeFee.settlement + " is taken from Platform, leaving " + direct.platform.applicationFee.afterStripeFee + " for Platform";
+    else if (direct.type === "Destination") {
+        logString += "\n\nSplit Finds (Destination Charge):" +
+            "\n1. " + direct.connectedPortion + " is sent to Connected Account, leaving " + direct.platform.applicationFee.settlement + " for Platform" +
+            "\n2. Stripe Fee of " + direct.stripeFee.settlement + " is taken from Platform, leaving " + direct.platform.applicationFee.afterStripeFee + " for Platform";
 
         if (direct.settlement.currency !== direct.platform.currency) {
-            logString+= "\n2a. " + direct.platform.applicationFee.afterStripeFee + " converted to " + direct.platform.applicationFee.final
-           + "\n2b. After " + direct.platform.pricing.fxPercent + "% conversion fee, " + direct.platform.applicationFee.finalAfterFxFee + " left for Platform";
+            logString += "\n2a. " + direct.platform.applicationFee.afterStripeFee + " converted to " + direct.platform.applicationFee.final +
+                "\n2b. After " + direct.platform.pricing.fxPercent + "% conversion fee, " + direct.platform.applicationFee.finalAfterFxFee + " left for Platform";
         }
-    } else if (direct.type === "Destination"){
-    		logString += "\n\nSplit Finds (Destination Charge):"
-        + "\n1. " + direct.connectedPortion + " is sent to Connected Account, leaving " + direct.platform.applicationFee.settlement + " for Platform"
-        + "\n2. Stripe Fee of " + direct.stripeFee.settlement + " is taken from Platform, leaving " + direct.platform.applicationFee.afterStripeFee + " for Platform";
+    } else if (direct.type === "Destination") {
+        logString += "\n\nSplit Finds (Destination Charge):" +
+            "\n1. " + direct.connectedPortion + " is sent to Connected Account, leaving " + direct.platform.applicationFee.settlement + " for Platform" +
+            "\n2. Stripe Fee of " + direct.stripeFee.settlement + " is taken from Platform, leaving " + direct.platform.applicationFee.afterStripeFee + " for Platform";
 
         if (direct.settlement.currency !== direct.platform.currency) {
-            logString+= "\n2a. " + direct.platform.applicationFee.afterStripeFee + " converted to " + direct.platform.applicationFee.final
-           + "\n2b. After " + direct.platform.pricing.fxPercent + "% conversion fee, " + direct.platform.applicationFee.finalAfterFxFee + " left for Platform";
-        } 
-    } else if (direct.type === "Standard"){
-    		logString += "\n\nStandard Charge:"
-        + "\n1. Stripe Fee of " + direct.stripeFee.settlement + " is taken, leaving " + direct.final.minus(direct.stripeFee.settlement);
+            logString += "\n2a. " + direct.platform.applicationFee.afterStripeFee + " converted to " + direct.platform.applicationFee.final +
+                "\n2b. After " + direct.platform.pricing.fxPercent + "% conversion fee, " + direct.platform.applicationFee.finalAfterFxFee + " left for Platform";
+        }
+    } else if (direct.type === "Standard") {
+        logString += "\n\nStandard Charge:" +
+            "\n1. Stripe Fee of " + direct.stripeFee.settlement + " is taken, leaving " + direct.final.minus(direct.stripeFee.settlement);
     } else /* SCT */ {
-    		logString += "\n\nSCT Charge:"
-        + "\n1. Stripe Fee of " + direct.stripeFee.settlement + " is taken, leaving " + direct.final.minus(direct.stripeFee.settlement);
+        logString += "\n\nSCT Charge:" +
+            "\n1. Stripe Fee of " + direct.stripeFee.settlement + " is taken, leaving " + direct.final.minus(direct.stripeFee.settlement);
     }
 
 
-	this.toString = function() {
-  	return logString;
-  };
+    this.toString = function() {
+        return logString;
+    };
 
 
 };
 
-/*
-setTimeout(function(){
-  alert("Hello"); 
-
-  var charge = new Charge.Direct({
-    amount: 100,
-    currency: "USD",
-    customer: {
-      country: "US"
-    },
-    account: {
-         country: "GB",
-         currency: "GBP"
-       },
-    platform: {
-      country: "US",
-      currency: "USD",
-      percentFee: 10
-    }
-  });
-  console.log(charge);
-  
-  
-  var x = new logger(charge);
-  
-  console.log(charge.type + " " + x);
-  
-  var charge = new Charge.Destination({
-        amount: 100,
-        currency: "USD",
-        customer: {
-          country: "US"
-        },
-        account: {
-         country: "GB",
-         currency: "GBP"
-       },
-        platform: {
-          country: "US",
-          currency: "USD",
-          percentFee: 10
-        }
-  });
-  console.log(charge);
-  var x = new logger(charge);
-  
-  console.log(charge.type + " " + x);
-  
-   var charge = new Charge.Standard({
-       amount: 100,
-       currency: "USD",
-       customer: {
-         country: "US"
-       },
-       account: {
-         country: "GB",
-         currency: "GBP"
-       },
-  });
-  console.log(charge);
-  var x = new logger(charge);
-  
-  console.log(charge.type + " " + x);
-  
-   var charge = new Charge.SCT({
-       amount: 100,
-       currency: "USD",
-       customer: {
-         country: "US"
-       },
-       account: {
-         country: "GB",
-         currency: "GBP"
-       },
-       platform: {
-          country: "US",
-          currency: "USD",
-          percentFee: 10
-        }
-  });
-  console.log(charge);
-  var x = new logger(charge);
-  
-  console.log(charge.type + " " + x);
-  
-}, 5000);
-*/
 function getInputElements() {
-	return {
-  		customerCard: document.getElementById("customer-card"),
-      connectedCountry: document.getElementById("connected-country"),
-      connectedCurrency: document.getElementById("connected-currency"),
-      platformCountry: document.getElementById("platform-country"),
-      platformCurrency: document.getElementById("platform-currency"),
-      platformFee: document.getElementById("platform-fee"),
-      chargeAmount: document.getElementById("charge-amount"),
-      chargeCurrency: document.getElementById("charge-currency"),
-      calculateButton: document.getElementById("calculateButton"),
-      directButton: document.getElementById("direct_button"),
-      outcome: document.getElementById("outcome"),
-  };
+    return {
+        customerCard: document.getElementById("customer-card"),
+        connectedCountry: document.getElementById("connected-country"),
+        connectedCurrency: document.getElementById("connected-currency"),
+        platformCountry: document.getElementById("platform-country"),
+        platformCurrency: document.getElementById("platform-currency"),
+        platformFee: document.getElementById("platform-fee"),
+        chargeAmount: document.getElementById("charge-amount"),
+        chargeCurrency: document.getElementById("charge-currency"),
+        calculateButton: document.getElementById("calculateButton"),
+        directButton: document.getElementById("direct_button"),
+        outcome: document.getElementById("outcome"),
+    };
 }
 
 window.onload = function() {
-		var elements = getInputElements();
-    
+    var elements = getInputElements();
+
     console.log(elements);
-    
+
     var platformElement = getPlatformElement();
     var radioFormElement = getChargeRadioForm();
     var radios = document.getElementsByName("flow");
-    
+
     function getPlatformElement() {
-    		return document.getElementsByClassName("platform-form")[0];
+        return document.getElementsByClassName("platform-form")[0];
     }
-    
+
     function getChargeRadioForm() {
-    		return document.getElementsByClassName("flow-form")[0];
+        return document.getElementsByClassName("flow-form")[0];
     }
-    
+
     function getChargeType() {
-      for(var i = 0; i < radios.length; i++) {
-        if(radios[i].checked) {
-          return radios[i].value
-        };   
-      }
+        for (var i = 0; i < radios.length; i++) {
+            if (radios[i].checked) {
+                return radios[i].value
+            };
+        }
     }
-    
-    
-    radioFormElement.addEventListener("click", function (event) {
+
+
+    radioFormElement.addEventListener("click", function(event) {
         if (event.target.type === "radio") {
-        		if (event.target.value === "Standard") {
-            		platformElement.classList.remove("visible");
+            if (event.target.value === "Standard") {
+                platformElement.classList.remove("visible");
             } else {
-            		platformElement.classList.add("visible");
+                platformElement.classList.add("visible");
             }
         }
     });
-    
-    
-    
+
+
+
     function chargeFromInput() {
-    		var a = elements.customerCard.value;
+        var a = elements.customerCard.value;
         var b = elements.connectedCountry.value;
         var c = elements.connectedCurrency.value;
         var d = elements.platformCountry.value;
@@ -732,66 +641,40 @@ window.onload = function() {
         var g = elements.chargeAmount.value;
         var h = elements.chargeCurrency.value;
 
-        //var customer = new Customer(a);
-        //var connected = new Account(b, c);
-        //var platform = new Platform(d, e, f);
-       // var charge = new Charge(g, h,customer, connected, platform );
-        //var connectCharge;
-        
-        
-        //var flow = $('input[name=flow]:checked').val();
-       // var flow = elements.directButton.checked ? "Direct" : "Destination";
-       var flow = getChargeType();
-       console.log(flow);
-       var myCharge = new Charge[flow]({
-       		amount: g,
-         	currency: h,
-         	customer: {
-         		country: a,
-         	},
-          account: {
-            country: b,
-            currency: c
-          },
-          platform: {
-           	country: d,
-           	currency: e,
-            percentFee: f
-          }
-       });
-       
-       console.log(myCharge);
-       
-       log = new logger(myCharge);
-       
-       
-       
-       
-       
-       /*
-        if (flow === "Direct"){
-          connectCharge = new Direct(charge, customer, connected, platform);
-        }
-        else {
-          connectCharge = new Destination(charge, customer, connected, platform);
-        }
 
-        connectCharge.log = new logger(connectCharge);
-     
+        var flow = getChargeType();
+        console.log(flow);
+        var myCharge = new Charge[flow]({
+            amount: g,
+            currency: h,
+            customer: {
+                country: a,
+            },
+            account: {
+                country: b,
+                currency: c
+            },
+            platform: {
+                country: d,
+                currency: e,
+                percentFee: f
+            }
+        });
 
-        return connectCharge;
-        */
+        console.log(myCharge);
+
+        log = new logger(myCharge);
+
         return log;
     }
-    
+
     // Calculate button callback
-    elements.calculateButton.addEventListener('click', function () {
+    elements.calculateButton.addEventListener('click', function() {
         var y = new chargeFromInput();
         elements.outcome.value = y;
         elements.outcome.style.display = "block";
     });
-    
-};
 
+};
 
 

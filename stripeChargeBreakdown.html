@@ -1,5 +1,5 @@
 <div class = "title">
-<h3>Connect Flow Breakdown</h3>
+<h3>Stripe Payment Flow Tool</h3>
 </div>
 
 
@@ -157,7 +157,7 @@
     <label for="direct_button">Direct</label>
 
     <input id = "destination_button"type="radio"name="flow" value="Destination">
-    <label class = "db" for="destination_button">Destination</label>
+    <label id = "dest" class = "db" for="destination_button">Destination</label>
     
     <input id = "sct_button"type="radio"name="flow" value="SCT">
     <label title="Separate Charges and Transfers" class = "db" for="sct_button">SCT</label>
@@ -599,7 +599,7 @@
           <option selected="selected" value="US">United States</option>
       </select>
       
-      <label for="connected-bank-currency">Bank Account On File</label>
+      <label for="connected-bank-currency">Bank Account Currency</label>
       <select id = "connected-currency" name="connected-bank-currency">
           <option value="AUD">AUD</option>
           <option value="CAD">CAD</option>
@@ -652,7 +652,7 @@
           <option selected="selected" value="US">United States</option>
       </select>
       
-      <label for="platform-bank-currency">Bank Account On File</label>
+      <label for="platform-bank-currency">Bank Account Currency</label>
       <select id = "platform-currency" name="platform-bank-currency">
           <option value="AUD">AUD</option>
           <option value="CAD">CAD</option>
