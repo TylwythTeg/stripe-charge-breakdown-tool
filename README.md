@@ -52,7 +52,7 @@ Conversion fees can be seen anytime real funds go through the conversion process
 For Connect charges, there may be an additional conversion fee as the platform receives or maintains its portion.
 
 Direct and Destination:
-- Platform's portion is automatically converted to its default currency if no correspdonding bank account is found. This isn't automatic with Destination charges, but since this would take place inevitably when the platform creates or receives automatically a payout for themselves, I included it in the breakdown.
+- Platform's portion is automatically converted to its default currency if no correspdonding bank account is found. This isn't automatic with Destination charges, but since this would take place inevitably when the platform creates or receives an automatic payout for themselves, it's included it in the breakdown.
 
 SCT:
 - Charge is created as is and there is no transfer or conversion until future instruction
