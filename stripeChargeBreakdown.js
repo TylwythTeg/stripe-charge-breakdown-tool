@@ -599,8 +599,8 @@ var logger = function(direct) {
             direct.platform.applicationFee.settlement + ")";
     }
     }
-
-    logString += "\n\nConnected Account:" +
+		var constrg = direct.type === "Standard" ? "Account" : "Connected Account"
+    logString += "\n\n" + constrg +":" +
         "\n - Country: " + direct.account.country +
         "\n - Default Currency: " + direct.account.currency;
 
