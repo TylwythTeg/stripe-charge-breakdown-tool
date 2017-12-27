@@ -6,8 +6,10 @@
 /* decimal.js v7.2.3 https://github.com/MikeMcl/decimal.js/LICENCE */
 
 /* Math.round ceil10 round10 https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/round */
-function decimalAdjust(t,e,i){return void 0===i||0==+i?Math[t](e):(e=+e,i=+i,isNaN(e)||"number"!=typeof i||i%1!=0?NaN:e<0?-decimalAdjust(t,-e,i):(e=e.toString().split("e"),e=Math[t](+(e[0]+"e"+(e[1]?+e[1]-i:-i))),+((e=e.toString().split("e"))[0]+"e"+(e[1]?+e[1]+i:i))))}Math.ceil10||(Math.ceil10=function(t,e){return decimalAdjust("ceil",t,e)}),Math.round10||(Math.round10=function(t,e){return decimalAdjust("round",t,e)});
+function decimalAdjust(t,e,i){return void 0===i||0==+i?Math[t](e):(e=+e,i=+i,isNaN(e)||"number"!=typeof i||i%1!=0?NaN:0>e?-decimalAdjust(t,-e,i):(e=e.toString().split("e"),e=Math[t](+(e[0]+"e"+(e[1]?+e[1]-i:-i))),+((e=e.toString().split("e"))[0]+"e"+(e[1]?+e[1]+i:i))))}Math.ceil10||(Math.ceil10=function(t,e){return decimalAdjust("ceil",t,e)}),Math.round10||(Math.round10=function(t,e){return decimalAdjust("round",t,e)}),Math.floor10||(Math.floor10=function(t,e){return decimalAdjust("floor",t,e)});
 /* Math.round ceil10 round10 https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/round */
+
+/* -------------------------------------------------------------------------- */
 
 /* load rates from OpenExchange */
 function loadRates() {
@@ -66,6 +68,8 @@ var Money = function(amount, currency) {
 
     this.currency = currency;
     var rounding = zeroDecimalCurrencies.includes(currency) ? 0 : -2;
+    //I probably don't want to expose this but will do for now
+    this.rounding = rounding;
     this.amount = new Decimal(Math.round10(amount, rounding));
 
     this.convertTo = function(currency) {
@@ -214,7 +218,9 @@ var Charge = (function() {
             this.fxFee = new Money(0, this.settlement.currency);
         }
         this.final = this.settlement.minus(this.fxFee);
-        this.stripeFee = new stripeFee(this.presentment, this.pricing, this.final);
+        this.stripeFee = new stripeFee(this);
+        //this.GST = new GST(this.stripeFee.settlement, this.account);
+        //this.VAT = new VAT(this.stripeFee.settlement, this.account);
     }
 
     function initializeCharge(options) {
@@ -235,7 +241,7 @@ var Charge = (function() {
         initializeCharge.call(this, options);
         settleFunds.call(this);
 
-        this.amountAfterStripeFee = this.final.minus(this.stripeFee.settlement);
+        this.amountAfterStripeFee = this.final.minus(this.stripeFee.final);
         this.platform.applicationFee = new ApplicationFee(this.platform, this, this.type);
         this.connectedPortion = this.amountAfterStripeFee.minus(this.platform.applicationFee.settlement);
     };
@@ -261,7 +267,7 @@ var Charge = (function() {
         initializeCharge.call(this, options);
         settleFunds.call(this);
 
-        this.finalAfterStripeFee = this.final.minus(this.stripeFee.settlement);
+        this.finalAfterStripeFee = this.final.minus(this.stripeFee.final);
     };
 
     return this;
@@ -277,7 +283,7 @@ var ApplicationFee = function(platform, charge, type) {
 
     /*  if destination, need to deduct stripe fee. If Direct, just set as settlement. */
     if (type === "Destination") {
-        this.afterStripeFee = this.settlement.minus(charge.stripeFee.settlement);
+        this.afterStripeFee = this.settlement.minus(charge.stripeFee.final);
     } else {
         this.afterStripeFee = this.settlement;
     }
@@ -427,8 +433,8 @@ var countries = {
         currency: "EUR"
     }),
     NZ: new Country("NZ", {
-        domestic: "1.4 + 0.25",
-        international: "2.9 + 0.25",
+        domestic: "2.9 + 0.3",
+        international: "2.9 + 0.3",
         fxPercent: 2,
         currency: "NZD"
     }),
@@ -488,14 +494,79 @@ var countries = {
     }),
 };
 
-var stripeFee = function(presentment, pricing, chargeSettlement) {
-    this.pricing = pricing;
-    this.settledFixedFee = this.pricing.fixed.convertTo(chargeSettlement.currency);
-    this.settlement = chargeSettlement
-        .times(pricing.percentMultiplier)
-        .plus(this.settledFixedFee);
+var GST = function (stripeFee, account) {
+		var stripePortionMultiplier = new Decimal(10).dividedBy(11);
+		if (account.country === "AU") {
+    		// handling money math and rounding ourselves...
+        var stripePortion = stripeFee.settlement.amount.times(stripePortionMultiplier);
+        var roundedStripe = new Decimal(Math.round10(stripePortion, stripeFee.settlement.rounding));
+        var flooredStripe = new Decimal(Math.floor10(stripePortion, stripeFee.settlement.rounding));
+        
+        var flooredTax = new Decimal(Math.floor10(flooredStripe.dividedBy(10), stripeFee.settlement.rounding));
+        var roundedTax = new Decimal(Math.round10(roundedStripe.dividedBy(10), stripeFee.settlement.rounding));
+        
+        console.log("Rounded Stripe: " + roundedStripe);
+        console.log("Floored Stripe: " + flooredStripe);
+        console.log("Rounded Tax: " + roundedTax);
+        console.log("Floored Tax: " + flooredTax);
+       
+        if (roundedTax === flooredTax) {
+        		return {
+            		stripePortion: new Money(roundedStripe, stripeFee.settlement.currency),
+                GSTPortion: new Money(roundedTax, stripeFee.settlement.currency)
+            }
+        } else {
+        		 var x = new Money(flooredStripe, stripeFee.settlement.currency);
+        		var stripePortion = x;
+            var GSTPortion = new Money(flooredTax, stripeFee.settlement.currency);
+           	/* side effect, altering stripe fee obj */
+            if ((stripePortion.plus(GSTPortion).amount < stripeFee.settlement.amount) && (roundedStripe.toString() !== flooredStripe.toString())) {
+            console.log("was less");
+            		stripeFee.settlement = stripePortion.plus(GSTPortion);
+            }
+        		return {
+            		stripePortion: x,
+                GSTPortion: stripeFee.settlement.minus(x)
+            }
+        }
+        
+    } else /* No GST applicable */ {
+        return {
+        		stripePortion: stripeFee.settlement,
+            GSTPortion: new Money(0,stripeFee.settlement.currency)
+        }
+    }
 };
 
+console.log(GST);
+
+var VAT = function(settledStripeFee, account) {
+		var VAT_RATE = new Decimal(0.23);
+		if (account.country === "IE") {
+    		return settledStripeFee.times(VAT_RATE);
+    } else /* no Vat required */ {
+    		return new Money(0,settledStripeFee.currency);
+    }
+};
+var stripeFee = function(charge) {
+    this.pricing = charge.pricing;
+    this.settledFixedFee = charge.pricing.fixed.convertTo(charge.settlement.currency);
+    this.settlement = charge.final
+        .times(charge.pricing.percentMultiplier)
+        .plus(this.settledFixedFee);
+        
+    var gst = new GST(this, charge.account);
+    var vat = new VAT(this.settlement, charge.account);
+    this.vat = vat;
+    
+    if (charge.account.country === "AU" || charge.account.country != "IE") {
+    		 this.final = this.settlement;
+         this.GSTPortion = gst.GSTPortion;
+    } else {
+    		this.final = this.settlement.plus(vat);
+    }
+   
+};
 
 
 
@@ -509,6 +580,16 @@ var logger = function(direct) {
         "\n - Pricing: " + direct.pricing.percent + "% + " + direct.pricing.fixed +
         "\n - Stripe Fee: " + direct.stripeFee.settlement + " (" +
         direct.pricing.percent + "% + " + direct.stripeFee.settledFixedFee + " of " + direct.final + ")";
+        
+        /* GST */
+     if (direct.account.country === "AU") {
+     		logString += "\n - GST: " + direct.stripeFee.GSTPortion + " of the " + direct.stripeFee.settlement + " Stripe Fee is included as GST";
+     }
+     
+       /* GST */
+     if (direct.account.country === "IE") {
+     		logString += "\n - VAT: " + direct.stripeFee.vat + " is added as VAT to Stripe Fee of " + direct.stripeFee.settlement + ", for a total fee of: " + direct.stripeFee.final;
+     }
 
     if (direct.type === "Destination" || direct.type === "Direct") {
         logString += "\n\nPlatform:" +
@@ -535,7 +616,7 @@ var logger = function(direct) {
 
     if (direct.type === "Direct") {
         logString += "\n\nSplit Funds (Direct Charge):" +
-            "\n1. Stripe Fee of " + direct.stripeFee.settlement + " is taken, leaving " + direct.amountAfterStripeFee +
+            "\n1. Stripe Fee of " + direct.stripeFee.final + " is taken, leaving " + direct.amountAfterStripeFee +
             "\n2. Application Fee of " + direct.platform.applicationFee.settlement + " is sent to platform, leaving " + direct.connectedPortion + " for Connected Account";
 
         if (direct.settlement.currency !== direct.platform.currency) {
@@ -546,7 +627,7 @@ var logger = function(direct) {
     else if (direct.type === "Destination") {
         logString += "\n\nSplit Finds (Destination Charge):" +
             "\n1. " + direct.connectedPortion + " is sent to Connected Account, leaving " + direct.platform.applicationFee.settlement + " for Platform" +
-            "\n2. Stripe Fee of " + direct.stripeFee.settlement + " is taken from Platform, leaving " + direct.platform.applicationFee.afterStripeFee + " for Platform";
+            "\n2. Stripe Fee of " + direct.stripeFee.final + " is taken from Platform, leaving " + direct.platform.applicationFee.afterStripeFee + " for Platform";
 
         if (direct.settlement.currency !== direct.platform.currency) {
             logString += "\n2a. " + direct.platform.applicationFee.afterStripeFee + " converted to " + direct.platform.applicationFee.final +
@@ -555,7 +636,7 @@ var logger = function(direct) {
     } else if (direct.type === "Destination") {
         logString += "\n\nSplit Finds (Destination Charge):" +
             "\n1. " + direct.connectedPortion + " is sent to Connected Account, leaving " + direct.platform.applicationFee.settlement + " for Platform" +
-            "\n2. Stripe Fee of " + direct.stripeFee.settlement + " is taken from Platform, leaving " + direct.platform.applicationFee.afterStripeFee + " for Platform";
+            "\n2. Stripe Fee of " + direct.stripeFee.final + " is taken from Platform, leaving " + direct.platform.applicationFee.afterStripeFee + " for Platform";
 
         if (direct.settlement.currency !== direct.platform.currency) {
             logString += "\n2a. " + direct.platform.applicationFee.afterStripeFee + " converted to " + direct.platform.applicationFee.final +
@@ -563,10 +644,10 @@ var logger = function(direct) {
         }
     } else if (direct.type === "Standard") {
         logString += "\n\nStandard Charge:" +
-            "\n1. Stripe Fee of " + direct.stripeFee.settlement + " is taken, leaving " + direct.final.minus(direct.stripeFee.settlement);
+            "\n1. Stripe Fee of " + direct.stripeFee.final + " is taken, leaving " + direct.final.minus(direct.stripeFee.final);
     } else /* SCT */ {
         logString += "\n\nSCT Charge:" +
-            "\n1. Stripe Fee of " + direct.stripeFee.settlement + " is taken, leaving " + direct.final.minus(direct.stripeFee.settlement);
+            "\n1. Stripe Fee of " + direct.stripeFee.final + " is taken, leaving " + direct.final.minus(direct.stripeFee.final);
     }
 
 

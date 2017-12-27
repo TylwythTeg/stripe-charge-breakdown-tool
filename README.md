@@ -31,6 +31,32 @@ Essentially a Standard charge that, like Destination charges, won't be converted
 
 Since the disbursement of separate charges and transfers is variable and relies on future action from the platform, this pricing quirk is largely what earns its place in the breakdown tool.
 
+# Fees
+
+## Stripe Fee
+
+The Stripe Fee is always taken using the pricing of the account's country depending on the domestic or international relationship between the account and the country the customer's card was issued. Generally a percentage of the charge amount on top of a small fixed fee.
+
+## GST
+
+Applies to charges settled in Australia and covered in the sticker price. (10/11) multiplied by stripe fee to find the rounded and floored stripe portion of the fee. These are divided by 10 to find their respective rounded and floored GST portions. If the GST portion that was rounded and the GST portion that was floored is the same, we will use the both rounded fees and the total stripe fee is unchained. However, if they are not the same, we use the floored version of both fees. In this case, if the the two fees (the GST and Stripe portion) are lower in sum than the sticker pricing, this lower amount is taken in total
+
+## VAT
+
+Applies to charges settled in Ireland and is a flat fee of 23% added on top of the sticker price.
+
+# Conversion Fee
+
+Conversion fees can be seen anytime real funds go through the conversion process. When a charge is initially settled in an account's country and their default currency differs from the currency presented and accepted at the time of charge, (assuming no other bank accounts to send to) it is converted to the account's default currency with a conversion fee using the account country's rate. Most countries are 2%, US is 1%.
+
+For Connect charges, there may be an additional conversion fee as the platform receives or maintains its portion.
+
+Direct and Destination:
+- Platform's portion is automatically converted to its default currency if no correspdonding bank account is found. This isn't automatic with Destination charges, but since this would take place inevitably when the platform creates or receives automatically a payout for themselves, I included it in the breakdown.
+
+SCT:
+- Charge is created as is and there is no transfer or conversion until future instruction
+
 
 # Dependencies
 
@@ -39,4 +65,4 @@ Since the disbursement of separate charges and transfers is variable and relies 
 
 # Use Here
 
-https://jsfiddle.net/0gczse8p/80/show
+https://jsfiddle.net/0gczse8p/116/show/
