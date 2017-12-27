@@ -509,7 +509,10 @@ var GST = function(stripeFee, account) {
         console.log("Rounded Tax: " + roundedTax);
         console.log("Floored Tax: " + flooredTax);
 
-        if (roundedTax === flooredTax) {
+        if (roundedTax.toString() === flooredTax.toString()) {
+        		
+        
+        
             return {
                 stripePortion: new Money(roundedStripe, stripeFee.settlement.currency),
                 GSTPortion: new Money(roundedTax, stripeFee.settlement.currency)
