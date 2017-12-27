@@ -10,7 +10,6 @@ function decimalAdjust(t,e,i){return void 0===i||0==+i?Math[t](e):(e=+e,i=+i,isN
 /* Math.round ceil10 round10 https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/round */
 
 /* -------------------------------------------------------------------------- */
-
 /* load rates from OpenExchange */
 function loadRates() {
     // Load exchange rates data via AJAX:
@@ -591,12 +590,14 @@ var logger = function(direct) {
         logString += "\n - VAT: " + direct.stripeFee.vat + " is added as VAT to Stripe Fee of " + direct.stripeFee.settlement + ", for a total fee of: " + direct.stripeFee.final;
     }
 
-    if (direct.type === "Destination" || direct.type === "Direct") {
+    if (direct.type !== "Standard") {
         logString += "\n\nPlatform:" +
             "\n - Country: " + direct.platform.country +
-            "\n - Default Currency: " + direct.platform.currency +
-            "\n - Platform Fee: " + direct.platform.applicationFee.presentment + " (" +
+            "\n - Default Currency: " + direct.platform.currency;
+            if (direct.type !== "SCT") {
+            logString += "\n - Platform Fee: " + direct.platform.applicationFee.presentment + " (" +
             direct.platform.applicationFee.settlement + ")";
+    }
     }
 
     logString += "\n\nConnected Account:" +
