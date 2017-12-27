@@ -494,46 +494,46 @@ var countries = {
     }),
 };
 
-var GST = function (stripeFee, account) {
-		var stripePortionMultiplier = new Decimal(10).dividedBy(11);
-		if (account.country === "AU") {
-    		// handling money math and rounding ourselves...
+var GST = function(stripeFee, account) {
+    var stripePortionMultiplier = new Decimal(10).dividedBy(11);
+    if (account.country === "AU") {
+        // handling money math and rounding ourselves...
         var stripePortion = stripeFee.settlement.amount.times(stripePortionMultiplier);
         var roundedStripe = new Decimal(Math.round10(stripePortion, stripeFee.settlement.rounding));
         var flooredStripe = new Decimal(Math.floor10(stripePortion, stripeFee.settlement.rounding));
-        
+
         var flooredTax = new Decimal(Math.floor10(flooredStripe.dividedBy(10), stripeFee.settlement.rounding));
         var roundedTax = new Decimal(Math.round10(roundedStripe.dividedBy(10), stripeFee.settlement.rounding));
-        
+
         console.log("Rounded Stripe: " + roundedStripe);
         console.log("Floored Stripe: " + flooredStripe);
         console.log("Rounded Tax: " + roundedTax);
         console.log("Floored Tax: " + flooredTax);
-       
+
         if (roundedTax === flooredTax) {
-        		return {
-            		stripePortion: new Money(roundedStripe, stripeFee.settlement.currency),
+            return {
+                stripePortion: new Money(roundedStripe, stripeFee.settlement.currency),
                 GSTPortion: new Money(roundedTax, stripeFee.settlement.currency)
             }
         } else {
-        		 var x = new Money(flooredStripe, stripeFee.settlement.currency);
-        		var stripePortion = x;
+            var x = new Money(flooredStripe, stripeFee.settlement.currency);
+            var stripePortion = x;
             var GSTPortion = new Money(flooredTax, stripeFee.settlement.currency);
-           	/* side effect, altering stripe fee obj */
+            /* side effect, altering stripe fee obj */
             if ((stripePortion.plus(GSTPortion).amount < stripeFee.settlement.amount) && (roundedStripe.toString() !== flooredStripe.toString())) {
-            console.log("was less");
-            		stripeFee.settlement = stripePortion.plus(GSTPortion);
+                console.log("was less");
+                stripeFee.settlement = stripePortion.plus(GSTPortion);
             }
-        		return {
-            		stripePortion: x,
+            return {
+                stripePortion: x,
                 GSTPortion: stripeFee.settlement.minus(x)
             }
         }
-        
+
     } else /* No GST applicable */ {
         return {
-        		stripePortion: stripeFee.settlement,
-            GSTPortion: new Money(0,stripeFee.settlement.currency)
+            stripePortion: stripeFee.settlement,
+            GSTPortion: new Money(0, stripeFee.settlement.currency)
         }
     }
 };
@@ -541,11 +541,11 @@ var GST = function (stripeFee, account) {
 console.log(GST);
 
 var VAT = function(settledStripeFee, account) {
-		var VAT_RATE = new Decimal(0.23);
-		if (account.country === "IE") {
-    		return settledStripeFee.times(VAT_RATE);
+    var VAT_RATE = new Decimal(0.23);
+    if (account.country === "IE") {
+        return settledStripeFee.times(VAT_RATE);
     } else /* no Vat required */ {
-    		return new Money(0,settledStripeFee.currency);
+        return new Money(0, settledStripeFee.currency);
     }
 };
 var stripeFee = function(charge) {
@@ -554,18 +554,18 @@ var stripeFee = function(charge) {
     this.settlement = charge.final
         .times(charge.pricing.percentMultiplier)
         .plus(this.settledFixedFee);
-        
+
     var gst = new GST(this, charge.account);
     var vat = new VAT(this.settlement, charge.account);
     this.vat = vat;
-    
+
     if (charge.account.country === "AU" || charge.account.country != "IE") {
-    		 this.final = this.settlement;
-         this.GSTPortion = gst.GSTPortion;
+        this.final = this.settlement;
+        this.GSTPortion = gst.GSTPortion;
     } else {
-    		this.final = this.settlement.plus(vat);
+        this.final = this.settlement.plus(vat);
     }
-   
+
 };
 
 
@@ -580,16 +580,16 @@ var logger = function(direct) {
         "\n - Pricing: " + direct.pricing.percent + "% + " + direct.pricing.fixed +
         "\n - Stripe Fee: " + direct.stripeFee.settlement + " (" +
         direct.pricing.percent + "% + " + direct.stripeFee.settledFixedFee + " of " + direct.final + ")";
-        
-        /* GST */
-     if (direct.account.country === "AU") {
-     		logString += "\n - GST: " + direct.stripeFee.GSTPortion + " of the " + direct.stripeFee.settlement + " Stripe Fee is included as GST";
-     }
-     
-       /* GST */
-     if (direct.account.country === "IE") {
-     		logString += "\n - VAT: " + direct.stripeFee.vat + " is added as VAT to Stripe Fee of " + direct.stripeFee.settlement + ", for a total fee of: " + direct.stripeFee.final;
-     }
+
+    /* GST */
+    if (direct.account.country === "AU") {
+        logString += "\n - GST: " + direct.stripeFee.GSTPortion + " of the " + direct.stripeFee.settlement + " Stripe Fee is included as GST";
+    }
+
+    /* GST */
+    if (direct.account.country === "IE") {
+        logString += "\n - VAT: " + direct.stripeFee.vat + " is added as VAT to Stripe Fee of " + direct.stripeFee.settlement + ", for a total fee of: " + direct.stripeFee.final;
+    }
 
     if (direct.type === "Destination" || direct.type === "Direct") {
         logString += "\n\nPlatform:" +
@@ -757,5 +757,3 @@ window.onload = function() {
     });
 
 };
-
-
