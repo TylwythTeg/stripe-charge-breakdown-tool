@@ -39,7 +39,7 @@ The Stripe Fee is always taken using the pricing of the account's country depend
 
 ## GST
 
-Applies to charges settled in Australia and covered in the sticker price. (10/11) multiplied by stripe fee to find the rounded and floored stripe portion of the fee. These are divided by 10 to find their respective rounded and floored GST portions. If the GST portion that was rounded and the GST portion that was floored is the same, we will use the both rounded fees and the total stripe fee is unchained. However, if they are not the same, we use the floored version of both fees. In this case, if the the two fees (the GST and Stripe portion) are lower in sum than the sticker pricing, this lower amount is taken in total
+Applies to charges settled in Australia and covered in the sticker price. (10/11) multiplied by stripe fee to find the rounded and floored stripe portion of the fee. These are divided by 10 to find their respective rounded and floored GST portions. If the GST portion that was rounded and the GST portion that was floored is the same, we will use both rounded fees and the total stripe fee is unchained. However, if they are not the same, we use the floored version of both fees. In this case, if the the two fees (the GST and Stripe portion) are lower in sum than the sticker pricing, this lower amount is taken in total
 
 ## VAT
 
