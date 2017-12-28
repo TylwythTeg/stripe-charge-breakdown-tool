@@ -2,7 +2,6 @@
 
 describe ("Money Object or Module", function () {
 
-
   it("converts itself to another currency, based on a given rate", function () {
     var money = new Money(100, "USD");
     expect(money.convertTo("GBP").amount.toString()).toEqual("127.88");
@@ -18,7 +17,6 @@ describe ("Money Object or Module", function () {
     expect(money.amount.toString()).toEqual("101");
   });
 
-
   it("adds an interface for direct math using decimal.js (times, plus, minus)", function () {
     var money = new Money(22.33, "USD");
     var outcome = money.times(12.4347).amount.toString();
@@ -26,12 +24,5 @@ describe ("Money Object or Module", function () {
     outcome = money.minus(12.4347).amount.toString();
     expect(outcome).toEqual("9.9");
   });
-
-
-
-
-
-    
-
 
 });

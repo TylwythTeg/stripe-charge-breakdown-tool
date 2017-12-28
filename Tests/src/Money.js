@@ -26,7 +26,6 @@ fx = (function () {
 
 
 var Money = (function (){
-    console.log("runs once");
 
    var zeroDecimalCurrencies = [
         "MGA",
@@ -85,6 +84,3 @@ var Money = (function (){
     return constructor;
 
 })();
-
-var x= new Money(100, "USD");
-console.log(x);
