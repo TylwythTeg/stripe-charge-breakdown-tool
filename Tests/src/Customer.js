@@ -50,12 +50,10 @@ var Customer = (function() {
         "MK",
         "PT",
     ];
-    constructor.prototype.european = function () {
-        return europeanCustomers.includes(this.country);
-    } 
 
     function constructor(country) {
         this.country = country;
+        this.european = europeanCustomers.includes(country);
     }
 
     return constructor;

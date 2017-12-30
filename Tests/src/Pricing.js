@@ -191,7 +191,7 @@ var Pricing = (function () {
             return JSON.stringify(this);
         };
 
-        PricingModel.fromCountry = function(code) {
+        PricingModel.from = function(code) {
             return countries[code];
         };
 

@@ -32,7 +32,7 @@ describe ("Pricing", function () {
 
         it("sets a dictionary of each pricing model for each Stripe Country and can retrieve entry by country code", function () {
 
-            var pricingModel = Pricing.Model.fromCountry("US");
+            var pricingModel = Pricing.Model.from("US");
 
             expect(pricingModel.domestic.toString()).toEqual("2.9 + 0.3 USD");
             expect(pricingModel.international.toString()).toEqual("3.9 + 0.3 USD");
@@ -44,9 +44,9 @@ describe ("Pricing", function () {
 
         it("Constructed or retrieved object uses .european to expose whether domestic means european customers", function () {
 
-            var pricingModel = Pricing.Model.fromCountry("US");
+            var pricingModel = Pricing.Model.from("US");
             expect(pricingModel.european).toEqual(false);
-            var pricingModel = Pricing.Model.fromCountry("GB");
+            var pricingModel = Pricing.Model.from("GB");
             expect(pricingModel.european).toEqual(true);
 
         });
