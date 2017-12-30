@@ -5,6 +5,22 @@ var Pricing = (function () {
     /* In addition to fx percent and multiplier () */
     /* Will be used specifically for the countries */
     Pricing.Model = (function () {
+        var europeanPricedAccounts = [
+            "AT",
+            "BE",
+            "DE",
+            "DK",
+            "FI",
+            "FR",
+            "IE",
+            "LU",
+            "NL",
+            "ES",
+            "SE",
+            "GB",
+            "IT",
+            "PT",
+        ];
         var countries = {
             "US": new PricingModel("US",{
                 domestic: "2.9 + 0.30",
@@ -167,13 +183,18 @@ var Pricing = (function () {
 
             this.domestic = new Pricing(pricing.domestic, pricing.currency);
             this.international = new Pricing(pricing.international, pricing.currency);
+
+            this.european = europeanPricedAccounts.includes(country);
         }
+
         PricingModel.prototype.toString = function() {
             return JSON.stringify(this);
         };
+
         PricingModel.fromCountry = function(code) {
             return countries[code];
         };
+
         return PricingModel;
     })();
 

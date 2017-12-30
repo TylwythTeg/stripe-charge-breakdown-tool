@@ -14,18 +14,18 @@ describe ("Pricing", function () {
     describe ("Pricing Model", function () {
         it("constructs pricing model for a country with domestic, international, converison pricing", function () {
 
-        var usModel = new Pricing.Model("US", {
-            domestic: "2.9 + 0.30",
-            international: "3.9 + 0.30",
-            fxPercent: 1,
-            currency: "USD"
-        });
+            var usModel = new Pricing.Model("US", {
+                domestic: "2.9 + 0.30",
+                international: "3.9 + 0.30",
+                fxPercent: 1,
+                currency: "USD"
+            });
 
-        expect(usModel.domestic.toString()).toEqual("2.9 + 0.3 USD");
-        expect(usModel.international.toString()).toEqual("3.9 + 0.3 USD");
+            expect(usModel.domestic.toString()).toEqual("2.9 + 0.3 USD");
+            expect(usModel.international.toString()).toEqual("3.9 + 0.3 USD");
 
-        expect(usModel.fxPercent.toString()).toEqual("1");
-        expect(usModel.fxMultiplier.toString()).toEqual("0.01");
+            expect(usModel.fxPercent.toString()).toEqual("1");
+            expect(usModel.fxMultiplier.toString()).toEqual("0.01");
 
         });
 
@@ -41,9 +41,16 @@ describe ("Pricing", function () {
             expect(pricingModel.fxMultiplier.toString()).toEqual("0.01");
 
         });
+
+        it("Constructed or retrieved object uses .european to expose whether domestic means european customers", function () {
+
+            var pricingModel = Pricing.Model.fromCountry("US");
+            expect(pricingModel.european).toEqual(false);
+            var pricingModel = Pricing.Model.fromCountry("GB");
+            expect(pricingModel.european).toEqual(true);
+
+        });
     });
-
-
 
 
 });
