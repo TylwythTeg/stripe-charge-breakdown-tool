@@ -12,7 +12,7 @@ describe ("Pricing", function () {
     });
 
     describe ("Pricing Model", function () {
-        it("constructs pricing model for a country with domestic, international, converison pricing", function () {
+        it("Constructs pricing model for a country with domestic, international, converison pricing", function () {
 
             var usModel = new Pricing.Model("US", {
                 domestic: "2.9 + 0.30",
@@ -30,7 +30,7 @@ describe ("Pricing", function () {
         });
 
 
-        it("sets a dictionary of each pricing model for each Stripe Country and can retrieve entry by country code", function () {
+        it("Sets a dictionary of each pricing model for each Stripe Country and can retrieve entry by country code", function () {
 
             var pricingModel = Pricing.Model.from("US");
 

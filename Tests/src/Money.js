@@ -17,7 +17,7 @@ fx = (function () {
         convert: function (amount, options) {
             var from = options.from;
             var to = options.to;
-            return amount.times(testConversionRate());
+            return (from === to) ? amount : amount.times(testConversionRate());
         }  
     };
 })();

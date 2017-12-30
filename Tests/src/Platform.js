@@ -1,18 +1,10 @@
-var Platform = (function () {
+function Platform (country, currency, feePercent) {
+    Account.call(this, country, currency);
+    this.feePercent = new Decimal(feePercent);
+    this.feeMultiplier = this.feePercent.times(0.01);
+}
 
-    function(country, currency, feePercent) {
-        this.country = country;
-        this.currency = currency;
-        this.feePercent = new Decimal(feePercent);
-        this.feeMultiplier = this.feePercent.times(0.01);
-        this.pricing = countries[country].pricing;
-
-        this.hasDomesticPricingFor = function(customer) {
-            return ((that.country === customer.country) || (that.pricing.european && customer.european));
-        };
-    };  
-})();
-
+Platform.prototype = Object.create(Account.prototype);
 
 
 
