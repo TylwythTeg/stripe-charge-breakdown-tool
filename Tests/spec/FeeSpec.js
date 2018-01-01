@@ -2,7 +2,7 @@ describe ("Fee", function () {
     
 
     describe("Stripe Fee", function () {
-        it("Calculates stripe fee based on pricing model (percent, fixed)", function () {
+        it("Calculates stripe fee based on pricing model using percent and fixed", function () {
             var stripeFee = new Fee.Stripe(
                 new Money(100, "USD"), 
                 Pricing.Model.from("US").domestic,
@@ -34,6 +34,16 @@ describe ("Fee", function () {
 
         });
 
+        it("Adds GST as a portion of the Stripe fee at a rate about 10% for charges settled in Australia", function () {
+            var stripeFee = new Fee.Stripe(
+                new Money(100, "AUD"), 
+                Pricing.Model.from("AU").domestic,
+                "AU");
+
+            expect(stripeFee.final.amount.toString()).toEqual("2.05");
+            expect(stripeFee.GSTPortion.amount.toString()).toEqual("0.19");
+        });
+
         it("Adds VAT on top of Stripe fee at a rate of 23% for charges settled in Ireland", function () {
             var stripeFee = new Fee.Stripe(
                 new Money(100, "EUR"), 
@@ -56,6 +66,34 @@ describe ("Fee", function () {
 
         });
 
+        it("Is assessed using account's pricing model currency but translated to the settlement currency if necessary", function () {
+            var stripeFee = new Fee.Stripe(
+                new Money(100, "EUR"), 
+                Pricing.Model.from("AU").domestic,
+                "AU");
+
+            expect(stripeFee.final.amount.toString()).toEqual("2.13");
+            expect(stripeFee.GSTPortion.amount.toString()).toEqual("0.19");
+        });
+
+        
+
+    });
+
+    describe("Application Fee", function () {
+        it("The platform's application fee is found based on the platform's percentage", function () {
+            var platform = new Platform("US", "USD", 10);
+
+            var appFee = new Fee.Application(platform, {
+                presentment: new Money(100, "USD"),
+                settlement: new Money(100, "USD"),
+                stripeFee: new Money (3.2, "'USD'"),
+            });
+
+            expect(appFee.finalAfterFxFee.amount.toString()).toEqual("10");
+
+
+        });
     });
 
         

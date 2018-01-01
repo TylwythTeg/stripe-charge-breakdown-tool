@@ -14,9 +14,9 @@ var Account = (function() {
 
     Account.prototype.pricingFor = function(customer) {
         if (this.hasDomesticPricingFor(customer)) {
-            return this.pricing.domestic;
+            return this.pricingModel.domestic;
         } else {
-            return this.pricing.international;
+            return this.pricingModel.international;
         }
     };
 
