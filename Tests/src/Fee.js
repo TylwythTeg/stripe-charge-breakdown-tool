@@ -108,6 +108,9 @@ var Fee = (function() {
             this.fxFee = new Money(0, platform.currency);
             this.finalAfterFxFee = this.final.minus(this.fxFee);
         }
+
+        /* TODO */
+        /* If final amount is greater than the amount left with the charge, just return the remainder */
     }
 
 
