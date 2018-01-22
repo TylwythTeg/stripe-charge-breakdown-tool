@@ -2,6 +2,7 @@
 /* Would it make the stripe fee adjustment make more sense?  */
 var Fee = (function() {
 
+    /* Conversion? */
 
     function StripeFee(finalChargeAmount, pricing, accountCountry) {
         this.pricing = pricing;
@@ -111,6 +112,14 @@ var Fee = (function() {
 
         /* TODO */
         /* If final amount is greater than the amount left with the charge, just return the remainder */
+        /* Is this direct only? */
+        /*
+        if (this.finalAfterFxFee.amount > charge.settlement.convertTo(this.finalAfterFxFee.currency).amount) {
+            var convertedSettled = charge.settlement.convertTo(this.finalAfterFxFee.currency);
+            this.fxFee = convertedSettled.times(platform.pricingModel.fxMultiplier);
+            this.finalAfterFxFee = convertedSettled.minus(this.fxFee);
+        }
+        */
     }
 
 

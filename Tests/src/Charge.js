@@ -61,7 +61,7 @@ var Charge = (function() {
         initializeCharge.call(this, options);
         settleFunds.call(this);
 
-        this.platform.applicationFee = new ApplicationFee(this.platform, this, this.type);
+        this.platform.applicationFee = new Fee.Application(this.platform, this, this.type);
         this.connectedPortion = this.final.minus(this.platform.applicationFee.settlement);
     };
 

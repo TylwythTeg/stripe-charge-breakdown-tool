@@ -26,4 +26,18 @@ describe ("Money", function () {
     expect(outcome).toEqual("9.9");
   });
 
+  it("Identifies its exact equivalency (currency, amount) with another money object", function () {
+    var money = new Money(22.33, "USD");
+    var other = new Money(22.33, "USD");
+    expect(money.equals(other)).toEqual(true);
+
+    var money = new Money(22.33, "USD");
+    var other = new Money(22.31, "USD");
+    expect(money.equals(other)).toEqual(false);
+
+    var money = new Money(22.31, "USD");
+    var other = new Money(22.31, "EUR");
+    expect(money.equals(other)).toEqual(false);
+  });
+
 });

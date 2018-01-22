@@ -9,6 +9,9 @@ function decimalAdjust(t,e,i){return void 0===i||0==+i?Math[t](e):(e=+e,i=+i,isN
 
 /* -------------------------------------------------------------------------- */
 
+/* Add to Decimal? */
+
+
 
 /* In place of Money.js dependency */
 fx = (function () {
@@ -72,6 +75,10 @@ var Money = (function (){
             to: currency
         });
         return new Money(amount, currency);
+    };
+
+    constructor.prototype.equals = function(money) {
+        return (this.currency === money.currency && this.amount.toNumber() === money.amount.toNumber());
     };
 
     function constructor(amount, currency) {

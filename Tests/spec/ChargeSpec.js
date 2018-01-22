@@ -134,4 +134,76 @@ describe ("Charge", function () {
           /* And is that what the platform would retain? */
 
     });
+
+    describe ("Destination", function () {
+          it("Creates a Destination Charge", function () {
+
+            var myCharge = new Charge.Destination({
+                    amount: 100,
+                    currency: "USD",
+                    customer: {
+                        country: "US",
+                    },
+                    account: {
+                        country: "US",
+                        currency: "USD"
+                    },
+                    platform: {
+                        country: "US",
+                        currency: "USD",
+                        percentFee: 10
+                    }
+            });
+            //expect(myCharge.final.amount.toString()).toEqual("100");
+            expect(myCharge.final.amount.toString()).toEqual("100");
+
+            var myCharge = new Charge.Destination({
+                    amount: 100,
+                    currency: "EUR",
+                    customer: {
+                        country: "US",
+                    },
+                    account: {
+                        country: "US",
+                        currency: "USD"
+                    },
+                    platform: {
+                        country: "US",
+                        currency: "USD",
+                        percentFee: 10
+                    }
+            });
+            //expect(myCharge.final.amount.toString()).toEqual("100");
+            expect(myCharge.settlement.amount.toString()).toEqual("127.88");
+
+
+
+          });
+
+          it("The Stripe Fee is taken first, and then the Application fee is assessed", function () {
+
+            var myCharge = new Charge.Destination({
+                    amount: 100,
+                    currency: "USD",
+                    customer: {
+                        country: "US",
+                    },
+                    account: {
+                        country: "US",
+                        currency: "USD"
+                    },
+                    platform: {
+                        country: "US",
+                        currency: "USD",
+                        percentFee: 10
+                    }
+            });
+            var amountMinusStripeFee = myCharge.final.minus(myCharge.stripeFee.settlement);
+            expect(amountMinusStripeFee.amount.toNumber()).toEqual(96.8);
+            expect(myCharge.platform.applicationFee.settlement.amount.toNumber()).toEqual(10);
+
+
+          });
+
+    });
 });
