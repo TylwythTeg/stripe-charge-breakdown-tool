@@ -52,7 +52,7 @@ var Charge = (function() {
         settleFunds.call(this);
 
         this.amountAfterStripeFee = this.final.minus(this.stripeFee.final);
-        this.platform.applicationFee = new ApplicationFee(this.platform, this, this.type);
+        this.platform.applicationFee = new Fee.Application(this.platform, this, this.type);
         this.connectedPortion = this.amountAfterStripeFee.minus(this.platform.applicationFee.settlement);
     };
 

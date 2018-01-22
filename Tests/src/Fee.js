@@ -10,7 +10,7 @@ var Fee = (function() {
             .times(pricing.percentMultiplier)
             .plus(this.settledFixedFee);
 
-        console.log(this.settlement.toString());
+        console.log(this.settlement.toString);
         var gst = new GST(this.settlement, accountCountry);
         var vat = new VAT(this.settlement, accountCountry);
         this.vat = vat;
@@ -100,7 +100,9 @@ var Fee = (function() {
         this.final = this.afterStripeFee.convertTo(platform.currency);
 
         if (platform.currency !== charge.settlement.currency) {
-            this.fxFee = this.final.times(platform.pricing.fxMultiplier);
+            console.log("dfdfdfdffgggggg");
+            console.log(platform);
+            this.fxFee = this.final.times(platform.pricingModel.fxMultiplier);
             this.finalAfterFxFee = this.final.minus(this.fxFee);
         } else {
             this.fxFee = new Money(0, platform.currency);
