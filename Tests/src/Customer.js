@@ -1,4 +1,10 @@
 var Customer = (function() {
+
+    function Customer(country) {
+        this.country = country;
+        this.european = europeanCustomers.includes(country);
+    }
+
     var europeanCustomers = [
         "AD",
         "AT",
@@ -51,10 +57,5 @@ var Customer = (function() {
         "PT",
     ];
 
-    function constructor(country) {
-        this.country = country;
-        this.european = europeanCustomers.includes(country);
-    }
-
-    return constructor;
+    return Customer;
 })();

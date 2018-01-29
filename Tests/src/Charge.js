@@ -1,5 +1,4 @@
 var Charge = (function() {
-    var that = this;
 
     function connectCharge(type) {
         return type !== "Standard";

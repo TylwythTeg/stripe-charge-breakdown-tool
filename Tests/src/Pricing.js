@@ -1,10 +1,41 @@
 
 var Pricing = (function () {
 
-    /* Object with domestic and international pricing objects*/
-    /* In addition to fx percent and multiplier () */
-    /* Will be used specifically for the countries */
+    function Pricing (pricing, currency){
+        var fees = pricing.split(" + ");
+        this.currency = currency;
+        this.percent = new Decimal(fees[0]);
+        this.percentMultiplier = this.percent.times(0.01);
+        this.fixed = new Money(fees[1], this.currency);
+    }
+
+    Pricing.prototype.toString = function() {
+        return this.percent.toString() + " + "
+            + this.fixed.toString(); 
+    };
+
+    /* Domestic/International pricing model for each country */
     Pricing.Model = (function () {
+
+        function PricingModel(country, pricing) {
+            this.currency = pricing.currency;
+            this.fxPercent = new Decimal(pricing.fxPercent);
+            this.fxMultiplier = this.fxPercent.times(0.01);
+
+            this.domestic = new Pricing(pricing.domestic, pricing.currency);
+            this.international = new Pricing(pricing.international, pricing.currency);
+
+            this.european = europeanPricedAccounts.includes(country);
+        }
+
+        PricingModel.prototype.toString = function() {
+            return JSON.stringify(this);
+        };
+
+        PricingModel.from = function(code) {
+            return countries[code];
+        };
+
         var europeanPricedAccounts = [
             "AT",
             "BE",
@@ -21,6 +52,7 @@ var Pricing = (function () {
             "IT",
             "PT",
         ];
+
         var countries = {
             "US": new PricingModel("US",{
                 domestic: "2.9 + 0.30",
@@ -175,41 +207,8 @@ var Pricing = (function () {
 
         };
 
-
-        function PricingModel(country, pricing) {
-            this.currency = pricing.currency;
-            this.fxPercent = new Decimal(pricing.fxPercent);
-            this.fxMultiplier = this.fxPercent.times(0.01);
-
-            this.domestic = new Pricing(pricing.domestic, pricing.currency);
-            this.international = new Pricing(pricing.international, pricing.currency);
-
-            this.european = europeanPricedAccounts.includes(country);
-        }
-
-        PricingModel.prototype.toString = function() {
-            return JSON.stringify(this);
-        };
-
-        PricingModel.from = function(code) {
-            return countries[code];
-        };
-
         return PricingModel;
     })();
-
-    function Pricing (pricing, currency){
-        var fees = pricing.split(" + ");
-        this.currency = currency;
-        this.percent = new Decimal(fees[0]);
-        this.percentMultiplier = this.percent.times(0.01);
-        this.fixed = new Money(fees[1], this.currency);
-    }
-
-    Pricing.prototype.toString = function() {
-        return this.percent.toString() + " + "
-            + this.fixed.toString(); 
-    };
 
     return Pricing;
 })();

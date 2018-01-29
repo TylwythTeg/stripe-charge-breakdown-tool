@@ -1,8 +1,7 @@
- /* Do I want to add a TransactionalFee contains a Stripe fee?  */
-/* Would it make the stripe fee adjustment make more sense?  */
-var Fee = (function() {
+/* Do I want to add a TransactionalFee that contains a Stripe fee?  */
+/* Would that make the stripe fee adjustment in GST situations make more sense?  */
 
-    /* Conversion? */
+var Fee = (function() {
 
     function StripeFee(finalChargeAmount, pricing, accountCountry) {
         this.pricing = pricing;
@@ -11,7 +10,6 @@ var Fee = (function() {
             .times(pricing.percentMultiplier)
             .plus(this.settledFixedFee);
 
-        console.log(this.settlement.toString);
         var gst = new GST(this.settlement, accountCountry);
         var vat = new VAT(this.settlement, accountCountry);
         this.vat = vat;
@@ -45,10 +43,10 @@ var Fee = (function() {
             var flooredStripe = new Decimal(Math.floor10(stripePortion, stripeFeeSettlement.rounding));
             var flooredTax = new Decimal(Math.floor10(flooredStripe.dividedBy(10), stripeFeeSettlement.rounding));
             var roundedTax = new Decimal(Math.round10(roundedStripe.dividedBy(10), stripeFeeSettlement.rounding));
-            console.log("Rounded Stripe: " + roundedStripe);
-            console.log("Floored Stripe: " + flooredStripe);
-            console.log("Rounded Tax: " + roundedTax);
-            console.log("Floored Tax: " + flooredTax);
+            //console.log("Rounded Stripe: " + roundedStripe);
+            //console.log("Floored Stripe: " + flooredStripe);
+            //console.log("Rounded Tax: " + roundedTax);
+            //console.log("Floored Tax: " + flooredTax);
             if (roundedTax.toString() === flooredTax.toString()) {
                 /* use rounded portions */
                 return {
@@ -101,8 +99,6 @@ var Fee = (function() {
         this.final = this.afterStripeFee.convertTo(platform.currency);
 
         if (platform.currency !== charge.settlement.currency) {
-            console.log("dfdfdfdffgggggg");
-            console.log(platform);
             this.fxFee = this.final.times(platform.pricingModel.fxMultiplier);
             this.finalAfterFxFee = this.final.minus(this.fxFee);
         } else {
@@ -110,16 +106,6 @@ var Fee = (function() {
             this.finalAfterFxFee = this.final.minus(this.fxFee);
         }
 
-        /* TODO */
-        /* If final amount is greater than the amount left with the charge, just return the remainder */
-        /* Is this direct only? */
-        /*
-        if (this.finalAfterFxFee.amount > charge.settlement.convertTo(this.finalAfterFxFee.currency).amount) {
-            var convertedSettled = charge.settlement.convertTo(this.finalAfterFxFee.currency);
-            this.fxFee = convertedSettled.times(platform.pricingModel.fxMultiplier);
-            this.finalAfterFxFee = convertedSettled.minus(this.fxFee);
-        }
-        */
     }
 
 

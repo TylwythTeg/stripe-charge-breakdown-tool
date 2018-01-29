@@ -40,10 +40,32 @@ function loadRates() {
 }
 loadRates();
 
-var Money = function(amount, currency) {
-    var that = this;
+var Money = (function (){
 
-    var zeroDecimalCurrencies = [
+    function Money(amount, currency) {
+        this.currency = currency;
+        var rounding = zeroDecimalCurrencies.includes(currency) ? 0 : -2;
+        this.rounding = rounding;
+        this.amount = new Decimal(Math.round10(amount, rounding));
+    };
+
+    Money.prototype.toString = function() {
+        return this.amount + " " + this.currency;
+    };
+
+    Money.prototype.convertTo = function(currency) {
+        var amount = fx.convert(this.amount, {
+            from: this.currency,
+            to: currency
+        });
+        return new Money(amount, currency);
+    };
+
+    Money.prototype.equals = function(money) {
+        return (this.currency === money.currency && this.amount.toNumber() === money.amount.toNumber());
+    };
+
+   var zeroDecimalCurrencies = [
         "MGA",
         "BIF",
         "PYG",
@@ -61,44 +83,35 @@ var Money = function(amount, currency) {
         "KMF",
     ];
 
-    this.toString = function() {
-        return that.amount + " " + that.currency;
-    };
-
-    this.currency = currency;
-    var rounding = zeroDecimalCurrencies.includes(currency) ? 0 : -2;
-    //I probably don't want to expose this but will do for now
-    this.rounding = rounding;
-    this.amount = new Decimal(Math.round10(amount, rounding));
-
-    this.convertTo = function(currency) {
-        var amount = fx.convert(that.amount, {
-            from: that.currency,
-            to: currency
-        });
-        return new Money(amount, currency);
-    };
-
     /* Add basic Decimal.js support */
-    function buildMathMethods() {
+    (function buildMathMethods() {
         var methods = ["plus", "minus", "times"];
         for (var i = 0; i < methods.length; i++) {
             let method = methods[i];
-            that[method] = function(money) {
+            Money.prototype[method] = function(money) {
                 if (money.hasOwnProperty("amount")) {
-                    var amount = that.amount[method](money.amount);
-                    return new Money(amount, that.currency);
+                    var amount = this.amount[method](money.amount);
+                    return new Money(amount, this.currency);
                 } else {
-                    var amount = that.amount[method](money);
-                    return new Money(amount, that.currency);
+                    var amount = this.amount[method](money);
+                    return new Money(amount, this.currency);
                 }
             };
         }
-    }
-    buildMathMethods();
-};
+    })();
 
-var Customer = function(cardCountry) {
+    
+    return Money;
+
+})();
+
+var Customer = (function() {
+
+    function Customer(country) {
+        this.country = country;
+        this.european = europeanCustomers.includes(country);
+    }
+
     var europeanCustomers = [
         "AD",
         "AT",
@@ -150,44 +163,380 @@ var Customer = function(cardCountry) {
         "MK",
         "PT",
     ];
-    this.country = cardCountry;
-    this.european = europeanCustomers.includes(cardCountry);
-}
 
-var Account = function(country, currency) {
-    var that = this;
-    this.country = country;
-    this.currency = currency;
-    this.pricing = countries[country].pricing;
+    return Customer;
+})();
 
-    this.hasDomesticPricingFor = function(customer) {
-        return ((that.country === customer.country) || (that.pricing.european && customer.european));
+
+var Pricing = (function () {
+
+    function Pricing (pricing, currency){
+        var fees = pricing.split(" + ");
+        this.currency = currency;
+        this.percent = new Decimal(fees[0]);
+        this.percentMultiplier = this.percent.times(0.01);
+        this.fixed = new Money(fees[1], this.currency);
+    }
+
+    Pricing.prototype.toString = function() {
+        return this.percent.toString() + " + "
+            + this.fixed.toString(); 
     };
 
-    this.pricingFor = function(customer) {
-        if (that.hasDomesticPricingFor(customer)) {
-            return that.pricing.domestic;
-        } else {
-            return that.pricing.international;
+    /* Domestic/International pricing model for each country */
+    Pricing.Model = (function () {
+
+        function PricingModel(country, pricing) {
+            this.currency = pricing.currency;
+            this.fxPercent = new Decimal(pricing.fxPercent);
+            this.fxMultiplier = this.fxPercent.times(0.01);
+
+            this.domestic = new Pricing(pricing.domestic, pricing.currency);
+            this.international = new Pricing(pricing.international, pricing.currency);
+
+            this.european = europeanPricedAccounts.includes(country);
         }
-    };
-}
 
-var Platform = function(country, currency, feePercent) {
-    var that = this;
-    this.country = country;
-    this.currency = currency;
-    this.feePercent = new Decimal(feePercent);
-    this.feeMultiplier = this.feePercent.times(0.01);
-    this.pricing = countries[country].pricing;
+        PricingModel.prototype.toString = function() {
+            return JSON.stringify(this);
+        };
 
-    this.hasDomesticPricingFor = function(customer) {
-        return ((that.country === customer.country) || (that.pricing.european && customer.european));
+        PricingModel.from = function(code) {
+            return countries[code];
+        };
+
+        var europeanPricedAccounts = [
+            "AT",
+            "BE",
+            "DE",
+            "DK",
+            "FI",
+            "FR",
+            "IE",
+            "LU",
+            "NL",
+            "ES",
+            "SE",
+            "GB",
+            "IT",
+            "PT",
+        ];
+
+        var countries = {
+            "US": new PricingModel("US",{
+                domestic: "2.9 + 0.30",
+                international: "3.9 + 0.30",
+                fxPercent: 1,
+                currency: "USD"
+            }),
+            "AU": new PricingModel("AU",{
+                domestic: "1.75 + 0.30",
+                international: "2.9 + 0.30",
+                fxPercent: 2,
+                currency: "AUD"
+            }),
+            "AT": new PricingModel("AT", {
+                domestic: "1.4 + 0.25",
+                international: "2.9 + 0.25",
+                fxPercent: 2,
+                currency: "EUR"
+            }),
+            "BE": new PricingModel("BE", {
+                domestic: "1.4 + 0.25",
+                international: "2.9 + 0.25",
+                fxPercent: 2,
+                currency: "EUR"
+            }),
+            "BR": new PricingModel("BR", {
+                domestic: "3.99 + 0.50",
+                international: "3.99 + 0.50",
+                fxPercent: 2,
+                currency: "BRL"
+            }),
+            "CA": new PricingModel("CA", {
+                domestic: "2.9 + 0.30",
+                international: "3.5 + 0.30",
+                fxPercent: 2,
+                currency: "CAD"
+            }),
+            "DK": new PricingModel("DK", {
+                domestic: "1.4 + 1.80",
+                international: "2.9 + 1.80",
+                fxPercent: 2,
+                currency: "DKK"
+            }),
+            "FI": new PricingModel("FI", {
+                domestic: "1.4 + 0.25",
+                international: "2.9 + 0.25",
+                fxPercent: 2,
+                currency: "EUR"
+            }),
+            "FR": new PricingModel("FR", {
+                domestic: "1.4 + 0.25",
+                international: "2.9 + 0.25",
+                fxPercent: 2,
+                currency: "EUR"
+            }),
+            "DE": new PricingModel("DE", {
+                domestic: "1.4 + 0.25",
+                international: "2.9 + 0.25",
+                fxPercent: 2,
+                currency: "EUR"
+            }),
+            "HK": new PricingModel("HK", {
+                domestic: "3.4 + 2.35",
+                international: "3.4 + 2.35",
+                fxPercent: 2,
+                currency: "HKD"
+            }),
+            "IE": new PricingModel("IE", {
+                domestic: "1.4 + 0.25",
+                international: "2.9 + 0.25",
+                fxPercent: 2,
+                currency: "EUR"
+            }),
+            "JP": new PricingModel("JP", {
+                domestic: "3.6 + 0",
+                international: "3.6 + 0",
+                fxPercent: 2,
+                currency: "JPY"
+            }),
+            "LU": new PricingModel("LU", {
+                domestic: "1.4 + 0.25",
+                international: "2.9 + 0.25",
+                fxPercent: 2,
+                currency: "EUR"
+            }),
+            "NL": new PricingModel("NL", {
+                domestic: "1.4 + 0.25",
+                international: "2.9 + 0.25",
+                fxPercent: 2,
+                currency: "EUR"
+            }),
+            "NZ": new PricingModel("NZ", {
+                domestic: "2.9 + 0.3",
+                international: "2.9 + 0.3",
+                fxPercent: 2,
+                currency: "NZD"
+            }),
+            "NO": new PricingModel("NO", {
+                domestic: "2.4 + 2",
+                international: "2.9 + 2",
+                fxPercent: 2,
+                currency: "NOK"
+            }),
+            "MX": new PricingModel("MX", {
+                domestic: "3.6 + 3",
+                international: "3.6 + 3",
+                fxPercent: 2,
+                currency: "MXN"
+            }),
+            "SG": new PricingModel("SG", {
+                domestic: "3.4 + 0.5",
+                international: "3.4 + 0.5",
+                fxPercent: 2,
+                currency: "SGD"
+            }),
+            "ES": new PricingModel("ES", {
+                domestic: "1.4 + 0.25",
+                international: "2.9 + 0.25",
+                fxPercent: 2,
+                currency: "EUR"
+            }),
+            "SE": new PricingModel("SE", {
+                domestic: "1.4 + 1.8",
+                international: "2.9 + 1.8",
+                fxPercent: 2,
+                currency: "SEK"
+            }),
+            "CH": new PricingModel("CH", {
+                domestic: "2.9 + 0.30",
+                international: "2.9 + 0.30",
+                fxPercent: 2,
+                currency: "CHF"
+            }),
+            "GB": new PricingModel("GB", {
+                domestic: "1.4 + 0.20",
+                international: "2.9 + 0.20",
+                fxPercent: 2,
+                currency: "GBP"
+            }),
+            "IT": new PricingModel("IT", {
+                domestic: "1.4 + 0.25",
+                international: "2.9 + 0.25",
+                fxPercent: 2,
+                currency: "EUR"
+            }),
+            "PT": new PricingModel("PT", {
+                domestic: "1.4 + 0.25",
+                international: "2.9 + 0.25",
+                fxPercent: 2,
+                currency: "EUR"
+            }),
+
+        };
+
+        return PricingModel;
+    })();
+
+    return Pricing;
+})();
+
+var Account = (function() {
+
+    function Account (country, currency) {
+        this.country = country;
+        this.currency = currency;
+        this.pricingModel = Pricing.Model.from(country);  
+    }
+
+    Account.prototype.hasDomesticPricingFor = function(customer) {
+        return ((this.country === customer.country) || (this.pricingModel.european && customer.european));
     };
-};
+
+    Account.prototype.pricingFor = function(customer) {
+        return this.hasDomesticPricingFor(customer) ?
+            this.pricingModel.domestic :
+            this.pricingModel.international;
+    };
+
+    return Account;
+})();
+
+var Platform = (function() {
+
+    function Platform (country, currency, feePercent) {
+        Account.call(this, country, currency);
+        this.feePercent = new Decimal(feePercent);
+        this.feeMultiplier = this.feePercent.times(0.01);
+    }
+
+    Platform.prototype = Object.create(Account.prototype);
+
+    return Platform;
+
+})();
+
+/* Do I want to add a TransactionalFee that contains a Stripe fee?  */
+/* Would that make the stripe fee adjustment in GST situations make more sense?  */
+
+var Fee = (function() {
+
+    function StripeFee(finalChargeAmount, pricing, accountCountry) {
+        this.pricing = pricing;
+        this.settledFixedFee = pricing.fixed.convertTo(finalChargeAmount.currency);
+        this.settlement = finalChargeAmount
+            .times(pricing.percentMultiplier)
+            .plus(this.settledFixedFee);
+
+        var gst = new GST(this.settlement, accountCountry);
+        var vat = new VAT(this.settlement, accountCountry);
+        this.vat = vat;
+
+        if (accountCountry === "AU") {
+            this.final = gst.stripeFeeTotal;
+            this.GSTPortion = gst.GSTPortion;
+        } else if (accountCountry === "IE") {
+            this.final = this.settlement.plus(vat);
+        } else {
+            this.final = this.settlement;
+        }
+    }
+
+    function VAT(stripeFeeSettlement, country) {
+        var VAT_RATE = new Decimal(0.23);
+        if (country === "IE") {
+            return stripeFeeSettlement.times(VAT_RATE);
+        } else /* no Vat required */ {
+            return new Money(0, stripeFeeSettlement.currency);
+        }
+    }
+
+    /* Calcs a GST and Stripe portion for StripeFee w/ StripeFeeTotal to indicate if the total changed in process */
+    function GST(stripeFeeSettlement, accountCountry) {
+        var stripePortionMultiplier = new Decimal(10).dividedBy(11);
+        if (accountCountry === "AU") {
+            // handling money math and rounding ourselves...
+            var stripePortion = stripeFeeSettlement.amount.times(stripePortionMultiplier);
+            var roundedStripe = new Decimal(Math.round10(stripePortion, stripeFeeSettlement.rounding));
+            var flooredStripe = new Decimal(Math.floor10(stripePortion, stripeFeeSettlement.rounding));
+            var flooredTax = new Decimal(Math.floor10(flooredStripe.dividedBy(10), stripeFeeSettlement.rounding));
+            var roundedTax = new Decimal(Math.round10(roundedStripe.dividedBy(10), stripeFeeSettlement.rounding));
+            //console.log("Rounded Stripe: " + roundedStripe);
+            //console.log("Floored Stripe: " + flooredStripe);
+            //console.log("Rounded Tax: " + roundedTax);
+            //console.log("Floored Tax: " + flooredTax);
+            if (roundedTax.toString() === flooredTax.toString()) {
+                /* use rounded portions */
+                return {
+                    stripePortion: new Money(roundedStripe, stripeFeeSettlement.currency),
+                    GSTPortion: new Money(roundedTax, stripeFeeSettlement.currency),
+                    stripeFeeTotal: stripeFeeSettlement
+                };
+            } else {
+                /* Use floored portions */
+                var stripePortion = new Money(flooredStripe, stripeFeeSettlement.currency);
+                var GSTPortion = new Money(flooredTax, stripeFeeSettlement.currency);
+                /* if portions don't add up, something needs adjustment */
+                if ((stripePortion.plus(GSTPortion).amount < stripeFeeSettlement.amount)) {
+                    if (roundedStripe.toString() !== flooredStripe.toString()) {
+                        /* send back an amount indicating total stripe fee amount must change */
+                        stripeFeeSettlement = stripePortion.plus(GSTPortion);
+                    } else {
+                        /* use rounded Stripe portion but find the GST fee on remainder */
+                        GSTPortion = stripeFeeSettlement.minus(stripePortion);
+                    }
+                }
+                return {
+                    stripePortion: stripePortion,
+                    GSTPortion: GSTPortion,
+                    stripeFeeTotal: stripeFeeSettlement,
+                };
+            }
+        } else /* No GST applicable */ {
+            return {
+                stripePortion: stripeFeeSettlement,
+                GSTPortion: new Money(0, stripeFeeSettlement.currency)
+            };
+        }
+    }
+
+    function Application(platform, charge, type) {
+        /* what is specified at the time of charge creation */
+        this.presentment = charge.presentment.times(platform.feeMultiplier);
+
+        /* No fx fee here because we're just converting a value */
+        this.settlement = this.presentment.convertTo(charge.settlement.currency);
+
+        /*  if destination, need to deduct stripe fee. If Direct, just set as settlement. */
+        if (type === "Destination") {
+            this.afterStripeFee = this.settlement.minus(charge.stripeFee.final);
+        } else {
+            this.afterStripeFee = this.settlement;
+        }
+
+        this.final = this.afterStripeFee.convertTo(platform.currency);
+
+        if (platform.currency !== charge.settlement.currency) {
+            this.fxFee = this.final.times(platform.pricingModel.fxMultiplier);
+            this.finalAfterFxFee = this.final.minus(this.fxFee);
+        } else {
+            this.fxFee = new Money(0, platform.currency);
+            this.finalAfterFxFee = this.final.minus(this.fxFee);
+        }
+
+    }
+
+    return {
+        Stripe: StripeFee,
+        GST: GST,
+        VAT: VAT,
+        Application: Application
+    };
+
+})();
 
 var Charge = (function() {
-    var that = this;
 
     function connectCharge(type) {
         return type !== "Standard";
@@ -198,9 +547,9 @@ var Charge = (function() {
         /* However, domestic vs.international logical choice depends on Platform */
         if (this.type === "SCT") {
             if (this.platform.hasDomesticPricingFor(this.customer)) {
-                return this.account.pricing.domestic;
+                return this.account.pricingModel.domestic;
             } else {
-                return this.account.pricing.international;
+                return this.account.pricingModel.international;
             }
         } else {
             console.log(this);
@@ -211,18 +560,17 @@ var Charge = (function() {
     function settleFunds() {
         if (this.presentment.currency !== this.account.currency) {
             this.settlement = this.presentment.convertTo(this.account.currency);
-            this.fxFee = this.settlement.times(this.account.pricing.fxMultiplier);
+            this.fxFee = this.settlement.times(this.account.pricingModel.fxMultiplier);
         } else {
             this.settlement = this.presentment;
             this.fxFee = new Money(0, this.settlement.currency);
         }
         this.final = this.settlement.minus(this.fxFee);
-        this.stripeFee = new stripeFee(this);
-        //this.GST = new GST(this.stripeFee.settlement, this.account);
-        //this.VAT = new VAT(this.stripeFee.settlement, this.account);
+        this.stripeFee = new Fee.Stripe(this.final, this.pricing, this.account.country);
     }
 
     function initializeCharge(options) {
+        console.log("sdfsdfsdfsdf");
         this.options = options;
         this.customer = new Customer(options.customer.country, options.customer.currency);
         this.account = new Account(options.account.country, options.account.currency);
@@ -241,7 +589,7 @@ var Charge = (function() {
         settleFunds.call(this);
 
         this.amountAfterStripeFee = this.final.minus(this.stripeFee.final);
-        this.platform.applicationFee = new ApplicationFee(this.platform, this, this.type);
+        this.platform.applicationFee = new Fee.Application(this.platform, this, this.type);
         this.connectedPortion = this.amountAfterStripeFee.minus(this.platform.applicationFee.settlement);
     };
 
@@ -250,7 +598,7 @@ var Charge = (function() {
         initializeCharge.call(this, options);
         settleFunds.call(this);
 
-        this.platform.applicationFee = new ApplicationFee(this.platform, this, this.type);
+        this.platform.applicationFee = new Fee.Application(this.platform, this, this.type);
         this.connectedPortion = this.final.minus(this.platform.applicationFee.settlement);
     };
 
@@ -272,305 +620,7 @@ var Charge = (function() {
     return this;
 })();
 
-var ApplicationFee = function(platform, charge, type) {
-
-    /* what is specified at the time of charge creation */
-    this.presentment = charge.presentment.times(platform.feeMultiplier);
-
-    /* No fx fee here because we're just converting a value */
-    this.settlement = this.presentment.convertTo(charge.settlement.currency);
-
-    /*  if destination, need to deduct stripe fee. If Direct, just set as settlement. */
-    if (type === "Destination") {
-        this.afterStripeFee = this.settlement.minus(charge.stripeFee.final);
-    } else {
-        this.afterStripeFee = this.settlement;
-    }
-
-    this.final = this.afterStripeFee.convertTo(platform.currency);
-
-    if (platform.currency !== charge.settlement.currency) {
-        this.fxFee = this.final.times(platform.pricing.fxMultiplier);
-        this.finalAfterFxFee = this.final.minus(this.fxFee);
-    } else {
-        this.fxFee = new Money(0, platform.currency);
-        this.finalAfterFxFee = this.final.minus(this.fxFee);
-    }
-};
-
-var Pricing = function(pricing, country) {
-    var that = this;
-    /* Accounts where Domestic means European */
-    var europeanAccounts = [
-        "AT",
-        "BE",
-        "DE",
-        "DK",
-        "FI",
-        "FR",
-        "IE",
-        "LU",
-        "NL",
-        "ES",
-        "SE",
-        "GB",
-        "IT",
-        "PT",
-    ];
-
-    var transactionalFee = function(pricing) {
-        var fees = pricing.split(" + ");
-        var fee = Object.create(Pricing);
-        fee.percent = new Decimal(fees[0]);
-        fee.percentMultiplier = fee.percent.times(0.01);
-        fee.fixed = new Money(fees[1], that.currency);
-        return fee;
-    };
-
-    this.currency = pricing.currency;
-    this.fxPercent = new Decimal(pricing.fxPercent);
-    this.fxMultiplier = this.fxPercent.times(0.01);
-    this.domestic = new transactionalFee(pricing.domestic);
-    this.international = new transactionalFee(pricing.international);
-    this.european = europeanAccounts.includes(country);
-};
-
-var Country = function(countryCode, pricing) {
-    this.code = countryCode;
-    this.pricing = new Pricing(pricing, countryCode);
-};
-
-var countries = {
-    "US": new Country("US", {
-        domestic: "2.9 + 0.30",
-        international: "3.9 + 0.30",
-        fxPercent: 1,
-        currency: "USD"
-    }),
-    AU: new Country("AU", {
-        domestic: "1.75 + 0.30",
-        international: "2.9 + 0.30",
-        fxPercent: 2,
-        currency: "AUD"
-    }),
-    AT: new Country("AT", {
-        domestic: "1.4 + 0.25",
-        international: "2.9 + 0.25",
-        fxPercent: 2,
-        currency: "EUR"
-    }),
-    BE: new Country("BE", {
-        domestic: "1.4 + 0.25",
-        international: "2.9 + 0.25",
-        fxPercent: 2,
-        currency: "EUR"
-    }),
-    BR: new Country("BR", {
-        domestic: "3.99 + 0.50",
-        international: "3.99 + 0.50",
-        fxPercent: 2,
-        currency: "BRL"
-    }),
-    CA: new Country("CA", {
-        domestic: "2.9 + 0.30",
-        international: "3.5 + 0.30",
-        fxPercent: 2,
-        currency: "CAD"
-    }),
-    DK: new Country("DK", {
-        domestic: "1.4 + 1.80",
-        international: "2.9 + 1.80",
-        fxPercent: 2,
-        currency: "DKK"
-    }),
-    FI: new Country("FI", {
-        domestic: "1.4 + 0.25",
-        international: "2.9 + 0.25",
-        fxPercent: 2,
-        currency: "EUR"
-    }),
-    FR: new Country("FR", {
-        domestic: "1.4 + 0.25",
-        international: "2.9 + 0.25",
-        fxPercent: 2,
-        currency: "EUR"
-    }),
-    DE: new Country("DE", {
-        domestic: "1.4 + 0.25",
-        international: "2.9 + 0.25",
-        fxPercent: 2,
-        currency: "EUR"
-    }),
-    HK: new Country("HK", {
-        domestic: "3.4 + 2.35",
-        international: "3.4 + 2.35",
-        fxPercent: 2,
-        currency: "HKD"
-    }),
-    IE: new Country("IE", {
-        domestic: "1.4 + 0.25",
-        international: "2.9 + 0.25",
-        fxPercent: 2,
-        currency: "EUR"
-    }),
-    JP: new Country("JP", {
-        domestic: "3.6 + 0",
-        international: "3.6 + 0",
-        fxPercent: 2,
-        currency: "JPY"
-    }),
-    LU: new Country("LU", {
-        domestic: "1.4 + 0.25",
-        international: "2.9 + 0.25",
-        fxPercent: 2,
-        currency: "EUR"
-    }),
-    NL: new Country("NL", {
-        domestic: "1.4 + 0.25",
-        international: "2.9 + 0.25",
-        fxPercent: 2,
-        currency: "EUR"
-    }),
-    NZ: new Country("NZ", {
-        domestic: "2.9 + 0.3",
-        international: "2.9 + 0.3",
-        fxPercent: 2,
-        currency: "NZD"
-    }),
-    NO: new Country("NO", {
-        domestic: "2.4 + 2",
-        international: "2.9 + 2",
-        fxPercent: 2,
-        currency: "NOK"
-    }),
-    MX: new Country("MX", {
-        domestic: "3.6 + 3",
-        international: "3.6 + 3",
-        fxPercent: 2,
-        currency: "MXN"
-    }),
-    SG: new Country("SG", {
-        domestic: "3.4 + 0.5",
-        international: "3.4 + 0.5",
-        fxPercent: 2,
-        currency: "SGD"
-    }),
-    ES: new Country("ES", {
-        domestic: "1.4 + 0.25",
-        international: "2.9 + 0.25",
-        fxPercent: 2,
-        currency: "EUR"
-    }),
-    SE: new Country("SE", {
-        domestic: "1.4 + 1.8",
-        international: "2.9 + 1.8",
-        fxPercent: 2,
-        currency: "SEK"
-    }),
-    CH: new Country("CH", {
-        domestic: "2.9 + 0.30",
-        international: "2.9 + 0.30",
-        fxPercent: 2,
-        currency: "CHF"
-    }),
-    GB: new Country("GB", {
-        domestic: "1.4 + 0.20",
-        international: "2.9 + 0.20",
-        fxPercent: 2,
-        currency: "GBP"
-    }),
-    IT: new Country("IT", {
-        domestic: "1.4 + 0.25",
-        international: "2.9 + 0.25",
-        fxPercent: 2,
-        currency: "EUR"
-    }),
-    PT: new Country("PT", {
-        domestic: "1.4 + 0.25",
-        international: "2.9 + 0.25",
-        fxPercent: 2,
-        currency: "EUR"
-    }),
-};
-
-var GST = function(stripeFee, account) {
-    var stripePortionMultiplier = new Decimal(10).dividedBy(11);
-    if (account.country === "AU") {
-        // handling money math and rounding ourselves...
-        var stripePortion = stripeFee.settlement.amount.times(stripePortionMultiplier);
-        var roundedStripe = new Decimal(Math.round10(stripePortion, stripeFee.settlement.rounding));
-        var flooredStripe = new Decimal(Math.floor10(stripePortion, stripeFee.settlement.rounding));
-
-        var flooredTax = new Decimal(Math.floor10(flooredStripe.dividedBy(10), stripeFee.settlement.rounding));
-        var roundedTax = new Decimal(Math.round10(roundedStripe.dividedBy(10), stripeFee.settlement.rounding));
-
-        console.log("Rounded Stripe: " + roundedStripe);
-        console.log("Floored Stripe: " + flooredStripe);
-        console.log("Rounded Tax: " + roundedTax);
-        console.log("Floored Tax: " + flooredTax);
-
-        if (roundedTax.toString() === flooredTax.toString()) {
-        		
-        
-        
-            return {
-                stripePortion: new Money(roundedStripe, stripeFee.settlement.currency),
-                GSTPortion: new Money(roundedTax, stripeFee.settlement.currency)
-            }
-        } else {
-            var x = new Money(flooredStripe, stripeFee.settlement.currency);
-            var stripePortion = x;
-            var GSTPortion = new Money(flooredTax, stripeFee.settlement.currency);
-            /* side effect, altering stripe fee obj */
-            if ((stripePortion.plus(GSTPortion).amount < stripeFee.settlement.amount) && (roundedStripe.toString() !== flooredStripe.toString())) {
-                console.log("was less");
-                stripeFee.settlement = stripePortion.plus(GSTPortion);
-            }
-            return {
-                stripePortion: x,
-                GSTPortion: stripeFee.settlement.minus(x)
-            }
-        }
-
-    } else /* No GST applicable */ {
-        return {
-            stripePortion: stripeFee.settlement,
-            GSTPortion: new Money(0, stripeFee.settlement.currency)
-        }
-    }
-};
-
-console.log(GST);
-
-var VAT = function(settledStripeFee, account) {
-    var VAT_RATE = new Decimal(0.23);
-    if (account.country === "IE") {
-        return settledStripeFee.times(VAT_RATE);
-    } else /* no Vat required */ {
-        return new Money(0, settledStripeFee.currency);
-    }
-};
-var stripeFee = function(charge) {
-    this.pricing = charge.pricing;
-    this.settledFixedFee = charge.pricing.fixed.convertTo(charge.settlement.currency);
-    this.settlement = charge.final
-        .times(charge.pricing.percentMultiplier)
-        .plus(this.settledFixedFee);
-
-    var gst = new GST(this, charge.account);
-    var vat = new VAT(this.settlement, charge.account);
-    this.vat = vat;
-
-    if (charge.account.country === "AU" || charge.account.country != "IE") {
-        this.final = this.settlement;
-        this.GSTPortion = gst.GSTPortion;
-    } else {
-        this.final = this.settlement.plus(vat);
-    }
-
-};
-
-
+/* Logger + Browser reliant code */
 
 var logger = function(direct) {
     /* charge method? */
@@ -602,7 +652,7 @@ var logger = function(direct) {
             direct.platform.applicationFee.settlement + ")";
     }
     }
-		var constrg = direct.type === "Standard" ? "Account" : "Connected Account"
+        var constrg = direct.type === "Standard" ? "Account" : "Connected Account"
     logString += "\n\n" + constrg +":" +
         "\n - Country: " + direct.account.country +
         "\n - Default Currency: " + direct.account.currency;
@@ -614,7 +664,7 @@ var logger = function(direct) {
         "\n1. " + direct.presentment + " Charge created on Connected Account";
     if (direct.presentment.currency !== direct.settlement.currency) {
         logString += "\n1a. " + direct.presentment + " converted to " + direct.settlement +
-            "\n1b. After " + direct.account.pricing.fxPercent + "% conversion fee, " + direct.final + " left over";
+            "\n1b. After " + direct.account.pricingModel.fxPercent + "% conversion fee, " + direct.final + " left over";
     }
 
 
@@ -625,7 +675,7 @@ var logger = function(direct) {
 
         if (direct.settlement.currency !== direct.platform.currency) {
             logString += "\n2a. " + direct.platform.applicationFee.settlement + " converted to " + direct.platform.applicationFee.final +
-                "\n2b. After " + direct.platform.pricing.fxPercent + "% conversion fee, " + direct.platform.applicationFee.finalAfterFxFee + " left for Platform";
+                "\n2b. After " + direct.platform.pricingModel.fxPercent + "% conversion fee, " + direct.platform.applicationFee.finalAfterFxFee + " left for Platform";
         }
     } /* destination */
     else if (direct.type === "Destination") {
@@ -635,7 +685,7 @@ var logger = function(direct) {
 
         if (direct.settlement.currency !== direct.platform.currency) {
             logString += "\n2a. " + direct.platform.applicationFee.afterStripeFee + " converted to " + direct.platform.applicationFee.final +
-                "\n2b. After " + direct.platform.pricing.fxPercent + "% conversion fee, " + direct.platform.applicationFee.finalAfterFxFee + " left for Platform";
+                "\n2b. After " + direct.platform.pricingModel.fxPercent + "% conversion fee, " + direct.platform.applicationFee.finalAfterFxFee + " left for Platform";
         }
     } else if (direct.type === "Destination") {
         logString += "\n\nSplit Finds (Destination Charge):" +
@@ -644,7 +694,7 @@ var logger = function(direct) {
 
         if (direct.settlement.currency !== direct.platform.currency) {
             logString += "\n2a. " + direct.platform.applicationFee.afterStripeFee + " converted to " + direct.platform.applicationFee.final +
-                "\n2b. After " + direct.platform.pricing.fxPercent + "% conversion fee, " + direct.platform.applicationFee.finalAfterFxFee + " left for Platform";
+                "\n2b. After " + direct.platform.pricingModel.fxPercent + "% conversion fee, " + direct.platform.applicationFee.finalAfterFxFee + " left for Platform";
         }
     } else if (direct.type === "Standard") {
         logString += "\n\nStandard Charge:" +
