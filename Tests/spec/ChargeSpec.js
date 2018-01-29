@@ -206,4 +206,67 @@ describe ("Charge", function () {
           });
 
     });
+
+    describe ("SCT", function () {
+        it("Creates an SCT Charge", function () {
+
+        var myCharge = new Charge.SCT({
+                amount: 100,
+                currency: "USD",
+                customer: {
+                    country: "US",
+                },
+                account: {
+                    country: "US",
+                    currency: "USD"
+                },
+                platform: {
+                    country: "US",
+                    currency: "USD",
+                    percentFee: 10
+                }
+        });
+
+        expect(myCharge.final.amount.toString()).toEqual("100");
+        });
+
+        it("Uses the connected account's pricing, but is based on relationship between platform and customer", function () {
+
+        var myCharge = new Charge.SCT({
+                amount: 100,
+                currency: "USD",
+                customer: {
+                    country: "US",
+                },
+                account: {
+                    country: "US",
+                    currency: "USD"
+                },
+                platform: {
+                    country: "FR",
+                    currency: "EUR",
+                    percentFee: 10
+                }
+        });
+        expect(myCharge.pricing.toString()).toEqual("3.9 + 0.3 USD");
+
+        var myCharge = new Charge.SCT({
+                amount: 100,
+                currency: "USD",
+                customer: {
+                    country: "GB",
+                },
+                account: {
+                    country: "US",
+                    currency: "USD"
+                },
+                platform: {
+                    country: "FR",
+                    currency: "EUR",
+                    percentFee: 10
+                }
+        });
+        expect(myCharge.pricing.toString()).toEqual("2.9 + 0.3 USD");
+        });
+    });
 });
