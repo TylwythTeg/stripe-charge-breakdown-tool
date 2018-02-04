@@ -40,6 +40,7 @@ describe ("Fee", function () {
                 Pricing.Model.from("AU").domestic,
                 "AU");
 
+            console.log(stripeFee);
             expect(stripeFee.final.amount.toString()).toEqual("2.05");
             expect(stripeFee.GSTPortion.amount.toString()).toEqual("0.19");
         });
@@ -80,6 +81,86 @@ describe ("Fee", function () {
 
     });
 
+    describe("GST", function () {
+        it("Calculates GST as a portion of Stripe's Fee, keeping the GST amount minimal", function () {
+            var myCharge = new Charge.Standard({
+                    amount: 100,
+                    currency: "AUD",
+                    customer: {
+                        country: "US",
+                    },
+                    account: {
+                        country: "AU",
+                        currency: "AUD"
+                    }
+            });
+
+            var stripeFee = myCharge.stripeFee;
+            expect(stripeFee.GSTPortion.amount.toString()).toEqual("0.29");
+            expect(stripeFee.final.minus(stripeFee.GSTPortion).amount.toString()).toEqual("2.91");
+            expect(stripeFee.final.toString()).toEqual("3.2 AUD");
+
+            /* rounded and floored GST portions aren't the same */
+            /* floored portions used */
+            /* an adjustment is made to the gst portion (increased from $0.55 to $0.56)*/
+            var myCharge = new Charge.Standard({
+                    amount: 201.19,
+                    currency: "AUD",
+                    customer: {
+                        country: "US",
+                    },
+                    account: {
+                        country: "AU",
+                        currency: "AUD"
+                    }
+            });
+
+            var stripeFee = myCharge.stripeFee;
+            expect(stripeFee.GSTPortion.amount.toString()).toEqual("0.56");
+            expect(stripeFee.final.minus(stripeFee.GSTPortion).amount.toString()).toEqual("5.57");
+            expect(stripeFee.final.toString()).toEqual("6.13 AUD");
+
+            /* duplicate of above */
+            var myCharge = new Charge.Standard({
+                    amount: 60.5,
+                    currency: "AUD",
+                    customer: {
+                        country: "US",
+                    },
+                    account: {
+                        country: "AU",
+                        currency: "AUD"
+                    }
+            });
+
+            var stripeFee = myCharge.stripeFee;
+            expect(stripeFee.GSTPortion.amount.toString()).toEqual("0.19");
+            expect(stripeFee.final.minus(stripeFee.GSTPortion).amount.toString()).toEqual("1.86");
+            expect(stripeFee.final.toString()).toEqual("2.05 AUD");
+
+            /* rounded and floored GST portions aren't the same */
+            /* floored portions used */
+            /* an adjustment is made to the stripe fee total*/
+            /*  (rounded stripe and floored stripe are not the same) */
+            var myCharge = new Charge.Standard({
+                    amount: 6.7,
+                    currency: "AUD",
+                    customer: {
+                        country: "US",
+                    },
+                    account: {
+                        country: "AU",
+                        currency: "AUD"
+                    }
+            });
+
+            var stripeFee = myCharge.stripeFee;
+            expect(stripeFee.GSTPortion.amount.toString()).toEqual("0.04");
+            expect(stripeFee.final.minus(stripeFee.GSTPortion).amount.toString()).toEqual("0.44");
+            expect(stripeFee.final.toString()).toEqual("0.48 AUD");
+        });
+    });
+
     describe("Application Fee", function () {
         it("The platform's application fee is found based on the platform's percentage", function () {
             var platform = new Platform("US", "USD", 10);
@@ -92,9 +173,23 @@ describe ("Fee", function () {
 
             expect(appFee.finalAfterFxFee.amount.toString()).toEqual("10");
 
+        });
+
+        it("The platform's application fee is found based on the platform's percentage", function () {
+            var platform = new Platform("US", "USD", 10);
+
+            var appFee = new Fee.Application(platform, {
+                presentment: new Money(100, "USD"),
+                settlement: new Money(100, "USD"),
+                stripeFee: new Money (3.2, "'USD'"),
+            });
+
+            expect(appFee.finalAfterFxFee.amount.toString()).toEqual("10");
 
         });
     });
+
+    
 
         
 

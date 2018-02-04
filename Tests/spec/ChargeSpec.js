@@ -269,4 +269,8 @@ describe ("Charge", function () {
         expect(myCharge.pricing.toString()).toEqual("2.9 + 0.3 USD");
         });
     });
+
+    /* I'm clobbering the global space somewhere, damn */
+    /* I knew it happened to other people but I never thought it'd happen to me */
+    console.log(window);
 });

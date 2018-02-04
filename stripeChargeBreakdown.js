@@ -183,7 +183,7 @@ var Pricing = (function () {
             + this.fixed.toString(); 
     };
 
-    /* Domestic/International pricing model for each country */
+    /* Domestic/International/European/ Conversion pricing model for each country */
     Pricing.Model = (function () {
 
         function PricingModel(country, pricing) {

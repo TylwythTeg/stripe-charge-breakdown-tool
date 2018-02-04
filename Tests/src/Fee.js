@@ -11,6 +11,7 @@ var Fee = (function() {
             .plus(this.settledFixedFee);
 
         var gst = new GST(this.settlement, accountCountry);
+        console.log(gst);
         var vat = new VAT(this.settlement, accountCountry);
         this.vat = vat;
 
@@ -26,61 +27,92 @@ var Fee = (function() {
 
     function VAT(stripeFeeSettlement, country) {
         var VAT_RATE = new Decimal(0.23);
-        if (country === "IE") {
-            return stripeFeeSettlement.times(VAT_RATE);
-        } else /* no Vat required */ {
-            return new Money(0, stripeFeeSettlement.currency);
-        }
+
+        return (country === "IE") ?
+            stripeFeeSettlement.times(VAT_RATE) :
+            new Money(0,stripeFeeSettlement.currency);
     }
 
-    /* Calcs a GST and Stripe portion for StripeFee w/ StripeFeeTotal to indicate if the total changed in process */
-    function GST(stripeFeeSettlement, accountCountry) {
-        var stripePortionMultiplier = new Decimal(10).dividedBy(11);
-        if (accountCountry === "AU") {
-            // handling money math and rounding ourselves...
-            var stripePortion = stripeFeeSettlement.amount.times(stripePortionMultiplier);
-            var roundedStripe = new Decimal(Math.round10(stripePortion, stripeFeeSettlement.rounding));
-            var flooredStripe = new Decimal(Math.floor10(stripePortion, stripeFeeSettlement.rounding));
-            var flooredTax = new Decimal(Math.floor10(flooredStripe.dividedBy(10), stripeFeeSettlement.rounding));
-            var roundedTax = new Decimal(Math.round10(roundedStripe.dividedBy(10), stripeFeeSettlement.rounding));
-            //console.log("Rounded Stripe: " + roundedStripe);
-            //console.log("Floored Stripe: " + flooredStripe);
-            //console.log("Rounded Tax: " + roundedTax);
-            //console.log("Floored Tax: " + flooredTax);
-            if (roundedTax.toString() === flooredTax.toString()) {
-                /* use rounded portions */
-                return {
-                    stripePortion: new Money(roundedStripe, stripeFeeSettlement.currency),
-                    GSTPortion: new Money(roundedTax, stripeFeeSettlement.currency),
-                    stripeFeeTotal: stripeFeeSettlement
-                };
-            } else {
-                /* Use floored portions */
-                var stripePortion = new Money(flooredStripe, stripeFeeSettlement.currency);
-                var GSTPortion = new Money(flooredTax, stripeFeeSettlement.currency);
-                /* if portions don't add up, something needs adjustment */
-                if ((stripePortion.plus(GSTPortion).amount < stripeFeeSettlement.amount)) {
-                    if (roundedStripe.toString() !== flooredStripe.toString()) {
-                        /* send back an amount indicating total stripe fee amount must change */
-                        stripeFeeSettlement = stripePortion.plus(GSTPortion);
-                    } else {
-                        /* use rounded Stripe portion but find the GST fee on remainder */
-                        GSTPortion = stripeFeeSettlement.minus(stripePortion);
-                    }
-                }
-                return {
-                    stripePortion: stripePortion,
-                    GSTPortion: GSTPortion,
-                    stripeFeeTotal: stripeFeeSettlement,
-                };
+    var GST = (function () {
+
+        function GST(stripeFeeSettlement, accountCountry) {
+            if (!applicable(accountCountry)) {
+                return noGST(stripeFeeSettlement);
             }
-        } else /* No GST applicable */ {
+
+            var stripePortionMultiplier = new Decimal(10).dividedBy(11);
+            var flooredStripe = stripeFeeSettlement.times(stripePortionMultiplier, "floor");
+            var roundedStripe = stripeFeeSettlement.times(stripePortionMultiplier);
+            var roundedTax = roundedStripe.dividedBy(10);
+            var flooredTax = flooredStripe.dividedBy(10, "floor");
+
+            var gstPortionsAreTheSame = (roundedTax.toString() === flooredTax.toString());
+
+
+            console.log("flooredStripe : " + flooredStripe);
+            console.log("flooredTax : " + flooredTax);
+            console.log("roundedStripe : " + roundedStripe);
+            console.log("roundedTax : " + roundedTax);
+
+            return gstPortionsAreTheSame ?
+                roundedPortions(roundedStripe, roundedTax, stripeFeeSettlement) :
+                flooredPortions(flooredStripe, roundedStripe, flooredTax, stripeFeeSettlement);
+        }
+
+
+        function applicable(country) {
+            return (country === "AU");
+        }
+
+        function noGST(stripeFeeSettlement) {
             return {
                 stripePortion: stripeFeeSettlement,
-                GSTPortion: new Money(0, stripeFeeSettlement.currency)
+                GSTPortion: new Money(0, stripeFeeSettlement.currency),
+                stripeFeeTotal: stripeFeeSettlement
             };
         }
-    }
+
+        function roundedPortions(roundedStripe, roundedTax, stripeFeeSettlement) {
+            return {
+                stripePortion: roundedStripe,
+                GSTPortion: roundedTax,
+                stripeFeeTotal: stripeFeeSettlement
+            };
+        }
+
+        function flooredPortions(flooredStripe, roundedStripe, flooredTax, stripeFeeSettlement) {
+            var adjustmentNecessary = (flooredStripe.plus(flooredTax).amount !== stripeFeeSettlement.amount);
+
+            /* I'm really not sure if this if statement would ever pass (TODO)*/
+            if (!adjustmentNecessary) {
+                console.log("If I see this in the console, that weird branch does happen!");
+                return {
+                    stripePortion: flooredStripe,
+                    GSTPortion: flooredTax,
+                    stripeFeeTotal: stripeFeeSettlement
+                };
+            }
+
+            /* send back an amount indicating total stripe fee amount must change */
+            if (roundedStripe.toString() !== flooredStripe.toString()) {
+                return {
+                    stripePortion: flooredStripe,
+                    GSTPortion: flooredTax,
+                    stripeFeeTotal: flooredStripe.plus(flooredTax)
+                };
+            } else {
+                /* Otherwise use floored Stripe portion but find the GST part on remainder */
+                var GSTPortion = stripeFeeSettlement.minus(flooredStripe);
+                return {
+                 stripePortion: flooredStripe,
+                 GSTPortion: stripeFeeSettlement.minus(flooredStripe),
+                 stripeFeeTotal: stripeFeeSettlement
+                };
+            }
+        }
+
+        return GST;
+    })();
 
     function Application(platform, charge, type) {
         /* what is specified at the time of charge creation */

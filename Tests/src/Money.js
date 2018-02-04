@@ -30,11 +30,13 @@ fx = (function () {
 
 var Money = (function (){
 
-    function Money(amount, currency) {
+    function Money(amount, currency, roundingMethod) {
+        var roundingMethod = (roundingMethod || "round");
         this.currency = currency;
-        var rounding = zeroDecimalCurrencies.includes(currency) ? 0 : -2;
-        this.rounding = rounding;
-        this.amount = new Decimal(Math.round10(amount, rounding));
+        this.rounding = zeroDecimalCurrencies.includes(currency) ? 0 : -2;
+        this.amount = new Decimal(
+            Math[roundingMethod + "10"](amount, this.rounding)
+        );
     };
 
     Money.prototype.toString = function() {
@@ -73,16 +75,21 @@ var Money = (function (){
 
     /* Add basic Decimal.js support */
     (function buildMathMethods() {
-        var methods = ["plus", "minus", "times"];
+        var methods = ["plus", "minus", "times", "dividedBy"];
         for (var i = 0; i < methods.length; i++) {
             let method = methods[i];
-            Money.prototype[method] = function(money) {
+            Money.prototype[method] = function(money, roundingMethod) {
+                // "round", "floor", "ceil"
+                if (!roundingMethod) {
+                    var roundingMethod = "round";
+                }
+
                 if (money.hasOwnProperty("amount")) {
                     var amount = this.amount[method](money.amount);
-                    return new Money(amount, this.currency);
+                    return new Money(amount, this.currency, roundingMethod);
                 } else {
                     var amount = this.amount[method](money);
-                    return new Money(amount, this.currency);
+                    return new Money(amount, this.currency, roundingMethod);
                 }
             };
         }

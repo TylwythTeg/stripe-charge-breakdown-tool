@@ -8,19 +8,18 @@ var Charge = (function() {
         /* SCTs use pricing of connected account like normal */
         /* However, domestic vs.international logical choice depends on Platform */
         if (this.type === "SCT") {
-            if (this.platform.hasDomesticPricingFor(this.customer)) {
-                return this.account.pricingModel.domestic;
-            } else {
-                return this.account.pricingModel.international;
-            }
+            return this.platform.hasDomesticPricingFor(this.customer) ?
+                this.account.pricingModel.domestic :
+                this.account.pricingModel.international;
         } else {
-            console.log(this);
             return this.account.pricingFor(this.customer);
         }
     }
 
     function settleFunds() {
-        if (this.presentment.currency !== this.account.currency) {
+        var that = this;
+
+        if (currenciesAreDifferent()) {
             this.settlement = this.presentment.convertTo(this.account.currency);
             this.fxFee = this.settlement.times(this.account.pricingModel.fxMultiplier);
         } else {
@@ -29,10 +28,14 @@ var Charge = (function() {
         }
         this.final = this.settlement.minus(this.fxFee);
         this.stripeFee = new Fee.Stripe(this.final, this.pricing, this.account.country);
+
+        
+        function currenciesAreDifferent() {
+            return (that.presentment.currency !== that.account.currency);
+        }
     }
 
     function initializeCharge(options) {
-        console.log("sdfsdfsdfsdf");
         this.options = options;
         this.customer = new Customer(options.customer.country, options.customer.currency);
         this.account = new Account(options.account.country, options.account.currency);
