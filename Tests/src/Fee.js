@@ -48,12 +48,6 @@ var Fee = (function() {
 
             var gstPortionsAreTheSame = (roundedTax.toString() === flooredTax.toString());
 
-
-            console.log("flooredStripe : " + flooredStripe);
-            console.log("flooredTax : " + flooredTax);
-            console.log("roundedStripe : " + roundedStripe);
-            console.log("roundedTax : " + roundedTax);
-
             return gstPortionsAreTheSame ?
                 roundedPortions(roundedStripe, roundedTax, stripeFeeSettlement) :
                 flooredPortions(flooredStripe, roundedStripe, flooredTax, stripeFeeSettlement);
@@ -81,18 +75,6 @@ var Fee = (function() {
         }
 
         function flooredPortions(flooredStripe, roundedStripe, flooredTax, stripeFeeSettlement) {
-            var adjustmentNecessary = (flooredStripe.plus(flooredTax).amount !== stripeFeeSettlement.amount);
-
-            /* I'm really not sure if this if statement would ever pass (TODO)*/
-            if (!adjustmentNecessary) {
-                console.log("If I see this in the console, that weird branch does happen!");
-                return {
-                    stripePortion: flooredStripe,
-                    GSTPortion: flooredTax,
-                    stripeFeeTotal: stripeFeeSettlement
-                };
-            }
-
             /* send back an amount indicating total stripe fee amount must change */
             if (roundedStripe.toString() !== flooredStripe.toString()) {
                 return {
