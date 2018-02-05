@@ -84,7 +84,6 @@ var Fee = (function() {
                 };
             } else {
                 /* Otherwise use floored Stripe portion but find the GST part on remainder */
-                var GSTPortion = stripeFeeSettlement.minus(flooredStripe);
                 return {
                  stripePortion: flooredStripe,
                  GSTPortion: stripeFeeSettlement.minus(flooredStripe),
