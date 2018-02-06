@@ -45,9 +45,7 @@ var Fee = (function() {
             var roundedTax = roundedStripe.dividedBy(10);
             var flooredTax = flooredStripe.dividedBy(10, "floor");
 
-            var gstPortionsAreTheSame = (roundedTax.toString() === flooredTax.toString());
-
-            return gstPortionsAreTheSame ?
+            return roundedTax.equals(flooredTax) ?
                 roundedPortions(roundedStripe, roundedTax, stripeFeeSettlement) :
                 flooredPortions(flooredStripe, roundedStripe, flooredTax, stripeFeeSettlement);
         }
@@ -74,22 +72,23 @@ var Fee = (function() {
         }
 
         function flooredPortions(flooredStripe, roundedStripe, flooredTax, stripeFeeSettlement) {
-            /* send back an amount indicating total stripe fee amount must change */
-            
-            if (roundedStripe.toString() !== flooredStripe.toString()) {
-                return {
-                    stripePortion: flooredStripe,
-                    GSTPortion: flooredTax,
-                    stripeFeeTotal: flooredStripe.plus(flooredTax)
-                };
-            } else {
-                /* Otherwise use floored Stripe portion but find the GST part on remainder */
+            if (roundedStripe.equals(flooredStripe)) {
+                /* Use floored Stripe portion and find the GST part on remainder */
+                /* (GSTPortion plus 1 cent) */
                 return {
                  stripePortion: flooredStripe,
                  GSTPortion: stripeFeeSettlement.minus(flooredStripe),
                  stripeFeeTotal: stripeFeeSettlement
                 };
             }
+
+            /* Otherwise use both floored portions and adjust the stripe fee total */
+            /* (stripeFeeTotal minus 1 cent) */
+            return {
+                    stripePortion: flooredStripe,
+                    GSTPortion: flooredTax,
+                    stripeFeeTotal: flooredStripe.plus(flooredTax)
+            };
         }
 
         return GST;
