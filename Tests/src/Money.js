@@ -99,5 +99,3 @@ var Money = (function (){
     return Money;
 
 })();
-
-console.log(window);

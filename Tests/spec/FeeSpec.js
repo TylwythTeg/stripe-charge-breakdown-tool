@@ -40,7 +40,6 @@ describe ("Fee", function () {
                 Pricing.Model.from("AU").domestic,
                 "AU");
 
-            console.log(stripeFee);
             expect(stripeFee.final.amount.toString()).toEqual("2.05");
             expect(stripeFee.GSTPortion.amount.toString()).toEqual("0.19");
         });
@@ -94,7 +93,6 @@ describe ("Fee", function () {
                         currency: "AUD"
                     }
             });
-            console.log(myCharge);
             var stripeFee = myCharge.stripeFee;
             expect(stripeFee.GSTPortion.amount.toString()).toEqual("0.29");
             expect(stripeFee.final.minus(stripeFee.GSTPortion).amount.toString()).toEqual("2.91");
@@ -188,9 +186,5 @@ describe ("Fee", function () {
 
         });
     });
-
-    
-
-        
 
 }); 

@@ -11,7 +11,6 @@ var Fee = (function() {
             .plus(this.settledFixedFee);
 
         var gst = new GST(this.settlement, accountCountry);
-        console.log(gst);
         var vat = new VAT(this.settlement, accountCountry);
         this.vat = vat;
 
@@ -76,6 +75,7 @@ var Fee = (function() {
 
         function flooredPortions(flooredStripe, roundedStripe, flooredTax, stripeFeeSettlement) {
             /* send back an amount indicating total stripe fee amount must change */
+            
             if (roundedStripe.toString() !== flooredStripe.toString()) {
                 return {
                     stripePortion: flooredStripe,
