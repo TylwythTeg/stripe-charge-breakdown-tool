@@ -4,6 +4,8 @@ var Charge = (function() {
         return type !== "Standard";
     }
 
+    var Charge = {};
+
     function getPricing() {
         /* SCTs use pricing of connected account like normal */
         /* However, domestic vs.international logical choice depends on Platform */
@@ -48,7 +50,7 @@ var Charge = (function() {
         this.settlement = this.presentment.convertTo(options.account.currency);
     }
 
-    this.Direct = function(options) {
+    Charge.Direct = function(options) {
         this.type = "Direct";
         initializeCharge.call(this, options);
         settleFunds.call(this);
@@ -58,7 +60,7 @@ var Charge = (function() {
         this.connectedPortion = this.amountAfterStripeFee.minus(this.platform.applicationFee.settlement);
     };
 
-    this.Destination = function(options) {
+    Charge.Destination = function(options) {
         this.type = "Destination";
         initializeCharge.call(this, options);
         settleFunds.call(this);
@@ -67,14 +69,14 @@ var Charge = (function() {
         this.connectedPortion = this.final.minus(this.platform.applicationFee.settlement);
     };
 
-    this.SCT = function(options) {
+    Charge.SCT = function(options) {
         this.type = "SCT";
         initializeCharge.call(this, options);
         settleFunds.call(this);
         /* What happens left is up to user. Transfer() methods for some reason? */
     };
 
-    this.Standard = function(options) {
+    Charge.Standard = function(options) {
         this.type = "Standard";
         initializeCharge.call(this, options);
         settleFunds.call(this);
@@ -82,5 +84,5 @@ var Charge = (function() {
         this.finalAfterStripeFee = this.final.minus(this.stripeFee.final);
     };
 
-    return this;
+    return Charge;
 })();

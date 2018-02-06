@@ -59,7 +59,6 @@ describe ("Charge", function () {
                         percentFee: 10
                     }
             });
-            //expect(myCharge.final.amount.toString()).toEqual("100");
             expect(myCharge.final.amount.toString()).toEqual("100");
 
             var myCharge = new Charge.Direct({

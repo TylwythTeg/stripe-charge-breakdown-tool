@@ -94,7 +94,7 @@ describe ("Fee", function () {
                         currency: "AUD"
                     }
             });
-
+            console.log(myCharge);
             var stripeFee = myCharge.stripeFee;
             expect(stripeFee.GSTPortion.amount.toString()).toEqual("0.29");
             expect(stripeFee.final.minus(stripeFee.GSTPortion).amount.toString()).toEqual("2.91");
