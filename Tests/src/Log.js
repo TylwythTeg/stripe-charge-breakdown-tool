@@ -6,7 +6,7 @@ var Log = (function() {
 
     }
 
-    Log.Settlement = function (presentment, settlement, final) {
+    Log.settlement = function (presentment, settlement, final) {
         var entries = [presentment + " charge created"];
 
         if (!presentment.equals(settlement)) {
