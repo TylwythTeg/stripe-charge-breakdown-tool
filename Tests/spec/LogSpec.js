@@ -8,7 +8,6 @@ describe ("Log", function () {
         new Money(100, "USD"),
         new Money(100, "USD"),        
     );
-
     console.log(log);
 
     var charge = new Charge.Standard({
@@ -22,9 +21,7 @@ describe ("Log", function () {
                 currency: "USD"
             }
     });
-
     var log = new Log.Settlement(charge.presentment, charge.settlement, charge.final);
-    console.log("inc----");
     console.log(log);
 
     /* If conversion was necessary, add 2 elements for the conversion and conversion fee process */
@@ -38,7 +35,6 @@ describe ("Log", function () {
             toString: function () {return "98 EUR";},
         },
     );
-
     console.log(log);
 
     var charge = new Charge.Standard({
@@ -52,10 +48,9 @@ describe ("Log", function () {
                 currency: "GBP"
             }
     });
-
     var log = new Log.Settlement(charge.presentment, charge.settlement, charge.final);
-    console.log("conversion necessary for charge settlement----");
     console.log(log);
+    
 
     //etc
 

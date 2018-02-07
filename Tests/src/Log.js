@@ -7,25 +7,20 @@ var Log = (function() {
     }
 
     Log.Settlement = function (presentment, settlement, final) {
-        var strings = [
-            presentment + " charge created"
-        ];
-        console.log(presentment.toString() );
-        console.log(settlement.toString());
-        console.log(final);
-        console.log(final.toString());
+        var entries = [presentment + " charge created"];
+
         if (!presentment.equals(settlement)) {
-            strings.push(presentment + " converted to " + settlement);
-            strings.push("After " + final.fxPercent + "% conversion fee, " +
+            entries.push(presentment + " converted to " + settlement);
+            entries.push("After " + final.fxPercent + "% conversion fee, " +
                 final.toString() + " is left");
         }
-        return strings;
+        return entries;
     };
 
     Log.directCharge = function(charge) {
-        var strings = Log.Settlement(charge.presentment, charge.settlement, charge.final);
+        var settlementEntries = Log.Settlement(charge.presentment, charge.settlement, charge.final);
 
-        var newStrings = [
+        var entries = [
             "Stripe Fee of " + charge.stripeFee.final + 
                 " is taken, leaving " + charge.amountAfterStripeFee,
             "Application Fee of " + charge.applicationFee.settlement + 
@@ -33,19 +28,19 @@ var Log = (function() {
         ];
 
         if (charge.applicationFee.conversionNecessary) {
-            newStrings.push(charge.applicationFee.settlement + "is converted to " +
+            entries.push(charge.applicationFee.settlement + "is converted to " +
                 charge.applicationFee.final);
-            newStrings.push("After " + charge.platform.pricingModel.fxFee + "% conversion fee, " + 
+            entries.push("After " + charge.platform.pricingModel.fxFee + "% conversion fee, " + 
                 charge.applicationFee.final.afterFxFee);
         }
 
-        return strings.concat(newStrings);
+        return settlementEntries.concat(entries);
     };
 
     Log.destinationCharge = function(charge) {
-        var strings = Log.Settlement(charge.presentment, charge.settlement, charge.final);
+        var settlementEntries = Log.Settlement(charge.presentment, charge.settlement, charge.final);
 
-        var newStrings = [
+        var entries = [
             charge.connectedPortion + " is sent to Connected Account, leaving " +
                 charge.applicationFee.settlement + " for Platform",
             "Stripe Fee of " + charge.stripeFee.settlement +
@@ -54,24 +49,24 @@ var Log = (function() {
         ];
 
         if (charge.applicationFee.conversionNecessary) {
-            newStrings.push(charge.applicationFee.settlement.afterStripeFee + "is converted to " +
+            entries.push(charge.applicationFee.settlement.afterStripeFee + "is converted to " +
                 charge.applicationFee.final);
-            newStrings.push("After " + charge.platform.pricingModel.fxFee + "% conversion fee, " + 
+            entries.push("After " + charge.platform.pricingModel.fxFee + "% conversion fee, " + 
                 charge.applicationFee.final.afterFxFee);
         }
 
-        return strings.concat(newStrings);
+        return settlementEntries.concat(entries);
     };
 
     Log.standardCharge = function(charge) {
-        var strings = Log.Settlement(charge.presentment, charge.settlement, charge.final);
+        var settlementEntries = Log.Settlement(charge.presentment, charge.settlement, charge.final);
 
-        var newStrings = [
+        var entries = [
             "Stripe Fee of " + charge.stripeFee.settlement +
                 "is taken, leaving " + charge.finalAfterStripeFee,
         ];
 
-        return strings.concat(newStrings);
+        return settlementEntries.concat(entries);
     };
 
 
