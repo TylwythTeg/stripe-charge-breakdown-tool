@@ -3,7 +3,7 @@ describe ("Log", function () {
 
 
     /* has 1 element defining the charge created if no conversion was necessary */
-    var log = new Log.Settlement(
+    var log = new Log.settlement(
         new Money(100, "USD"),
         new Money(100, "USD"),
         new Money(100, "USD"),        
@@ -21,11 +21,11 @@ describe ("Log", function () {
                 currency: "USD"
             }
     });
-    var log = new Log.Settlement(charge.presentment, charge.settlement, charge.final);
+    var log = new Log.settlement(charge.presentment, charge.settlement, charge.final);
     console.log(log);
 
     /* If conversion was necessary, add 2 elements for the conversion and conversion fee process */
-    var log = new Log.Settlement(
+    var log = new Log.settlement(
         new Money(100, "USD"),
         new Money(122, "EUR"),
         {
@@ -48,7 +48,7 @@ describe ("Log", function () {
                 currency: "GBP"
             }
     });
-    var log = new Log.Settlement(charge.presentment, charge.settlement, charge.final);
+    var log = new Log.settlement(charge.presentment, charge.settlement, charge.final);
     console.log(log);
     
 
