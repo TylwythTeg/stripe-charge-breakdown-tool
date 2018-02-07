@@ -95,29 +95,25 @@ var Fee = (function() {
     })();
 
     function Application(platform, charge, type) {
+        this.conversionNecessary = (platform.currency !== charge.settlement.currency);
+
         /* what is specified at the time of charge creation */
         this.presentment = charge.presentment.times(platform.feeMultiplier);
 
         /* No fx fee here because we're just converting a value */
         this.settlement = this.presentment.convertTo(charge.settlement.currency);
 
-        /*  if destination, need to deduct stripe fee. If Direct, just set as settlement. */
         if (type === "Destination") {
-            this.afterStripeFee = this.settlement.minus(charge.stripeFee.final);
+            this.settlement.afterStripeFee = this.settlement.minus(charge.stripeFee.final);
+            this.final = this.settlement.afterStripeFee.convertTo(platform.currency);
         } else {
-            this.afterStripeFee = this.settlement;
+            this.final = this.settlement.convertTo(platform.currency);
+        } 
+
+        if (this.conversionNecessary) {
+            this.final.fxFee = this.final.times(platform.pricingModel.fxMultiplier);
+            this.final.afterFxFee = this.final.minus(this.final.fxFee);
         }
-
-        this.final = this.afterStripeFee.convertTo(platform.currency);
-
-        if (platform.currency !== charge.settlement.currency) {
-            this.fxFee = this.final.times(platform.pricingModel.fxMultiplier);
-            this.finalAfterFxFee = this.final.minus(this.fxFee);
-        } else {
-            this.fxFee = new Money(0, platform.currency);
-            this.finalAfterFxFee = this.final.minus(this.fxFee);
-        }
-
     }
 
 

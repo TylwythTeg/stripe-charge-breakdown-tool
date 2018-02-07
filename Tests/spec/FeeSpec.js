@@ -168,8 +168,7 @@ describe ("Fee", function () {
                 settlement: new Money(100, "USD"),
                 stripeFee: new Money (3.2, "'USD'"),
             });
-
-            expect(appFee.finalAfterFxFee.amount.toString()).toEqual("10");
+            expect(appFee.final.amount.toString()).toEqual("10");
 
         });
 
@@ -182,7 +181,7 @@ describe ("Fee", function () {
                 stripeFee: new Money (3.2, "'USD'"),
             });
 
-            expect(appFee.finalAfterFxFee.amount.toString()).toEqual("10");
+            expect(appFee.final.amount.toString()).toEqual("10");
 
         });
     });

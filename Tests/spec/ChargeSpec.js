@@ -102,7 +102,7 @@ describe ("Charge", function () {
                         percentFee: 10
                     }
             });
-            expect(myCharge.platform.applicationFee.finalAfterFxFee.amount.toString()).toEqual("10");
+            expect(myCharge.platform.applicationFee.final.amount.toString()).toEqual("10");
 
             var myCharge = new Charge.Direct({
                     amount: 100,
@@ -121,7 +121,7 @@ describe ("Charge", function () {
                     }
             });
             expect(myCharge.platform.applicationFee.final.amount.toString()).toEqual("12.79");
-            expect(myCharge.platform.applicationFee.finalAfterFxFee.amount.toString()).toEqual("12.53");
+            expect(myCharge.platform.applicationFee.final.afterFxFee.amount.toString()).toEqual("12.53");
 
 
 

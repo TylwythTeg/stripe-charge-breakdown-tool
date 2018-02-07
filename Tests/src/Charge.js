@@ -29,7 +29,18 @@ var Charge = (function() {
             this.fxFee = new Money(0, this.settlement.currency);
         }
         this.final = this.settlement.minus(this.fxFee);
+        this.final.fxPercent = this.account.pricingModel.fxPercent;
         this.stripeFee = new Fee.Stripe(this.final, this.pricing, this.account.country);
+
+        /* How I imagine it should be. If there's an afterFxFee you know it converted
+        if (currenciesAreDifferent) {
+            this.settlement = this.presentment.convertTo(this.account.currency);
+            this.settlement.fxFee = this.settlement.times(this.account.pricingModel.fxMultiplier);
+            this.settlement.afterFxFee = this.settlement.minus(this.settlement.fxFee);
+        } else {
+            this.settlement = this.presentment;
+        }
+        */
 
         
         function currenciesAreDifferent() {
@@ -66,8 +77,12 @@ var Charge = (function() {
         settleFunds.call(this);
 
         this.platform.applicationFee = new Fee.Application(this.platform, this, this.type);
-        this.connectedPortion = this.final.minus(this.platform.applicationFee.settlement);
+
+        var final = this.final.afterFxFee || this.final;
+        this.connectedPortion = final.minus(this.platform.applicationFee.settlement);
     };
+
+    
 
     Charge.SCT = function(options) {
         this.type = "SCT";
