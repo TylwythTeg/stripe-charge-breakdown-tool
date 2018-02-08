@@ -6,21 +6,29 @@ var Log = (function() {
 
     }
 
-    Log.settlement = function (presentment, settlement, final) {
-        var events = [presentment + " charge created"];
+    Log.Settlement = function (presentment, settlement, final) {
+        this.type = "Settlement";
+        this.events = [presentment + " charge created"];
         if (!presentment.equals(settlement)) {
-            events.push(presentment + " converted to " + settlement);
-            events.push("After " + final.fxPercent + "% conversion fee, " +
+            this.events.push(presentment + " converted to " + settlement);
+            this.events.push("After " + final.fxPercent + "% conversion fee, " +
                 final + " is left");
         }
-        return events;
     };
 
-    /* Log.directFlow, Log.destinationFlow, Log.standardFlow ?*/
-    Log.directCharge = function(charge) {
-        var settlementEvents = Log.Settlement(charge.presentment, charge.settlement, charge.final);
+    Log.flow = {};
 
-        var events = [
+    Log.flow.Standard = function(charge) {
+        this.type = "StandardFlow";
+        this.events = [
+            "Stripe Fee of " + charge.stripeFee.settlement +
+                " is taken, leaving " + charge.finalAfterStripeFee,
+        ];
+    };
+
+    Log.flow.Direct = function(charge) {
+        this.type = "DirectFlow";
+        this.events = [
             "Stripe Fee of " + charge.stripeFee.final + 
                 " is taken, leaving " + charge.amountAfterStripeFee,
             "Application Fee of " + charge.applicationFee.settlement + 
@@ -28,13 +36,11 @@ var Log = (function() {
         ];
 
         if (charge.applicationFee.conversionNecessary) {
-            events.push(charge.applicationFee.settlement + "is converted to " +
+            this.events.push(charge.applicationFee.settlement + "is converted to " +
                 charge.applicationFee.final);
-            events.push("After " + charge.platform.pricingModel.fxFee + "% conversion fee, " + 
+            this.events.push("After " + charge.platform.pricingModel.fxFee + "% conversion fee, " + 
                 charge.applicationFee.final.afterFxFee);
         }
-
-        return settlementEvents.concat(events);
     };
 
     Log.destinationCharge = function(charge) {
@@ -58,16 +64,7 @@ var Log = (function() {
         return settlementEvents.concat(events);
     };
 
-    Log.standardCharge = function(charge) {
-        var settlementEvents = Log.Settlement(charge.presentment, charge.settlement, charge.final);
-
-        var events = [
-            "Stripe Fee of " + charge.stripeFee.settlement +
-                "is taken, leaving " + charge.finalAfterStripeFee,
-        ];
-
-        return settlementEntries.concat(events);
-    };
+    
 
 
 
