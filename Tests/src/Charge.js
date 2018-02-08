@@ -6,6 +6,7 @@ var Charge = (function() {
 
     var Charge = {};
 
+
     function getPricing() {
         /* SCTs use pricing of connected account like normal */
         /* However, domestic vs.international logical choice depends on Platform */
@@ -59,6 +60,10 @@ var Charge = (function() {
         this.pricing = getPricing.call(this, options.type);
         this.presentment = new Money(options.amount, options.currency);
         this.settlement = this.presentment.convertTo(options.account.currency);
+
+        this.connect = function () {
+            return this.type !== "Standard";
+        };
     }
 
     Charge.Direct = function(options) {

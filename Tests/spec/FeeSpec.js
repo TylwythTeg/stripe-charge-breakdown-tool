@@ -171,19 +171,6 @@ describe ("Fee", function () {
             expect(appFee.final.amount.toString()).toEqual("10");
 
         });
-
-        it("The platform's application fee is found based on the platform's percentage", function () {
-            var platform = new Platform("US", "USD", 10);
-
-            var appFee = new Fee.Application(platform, {
-                presentment: new Money(100, "USD"),
-                settlement: new Money(100, "USD"),
-                stripeFee: new Money (3.2, "'USD'"),
-            });
-
-            expect(appFee.final.amount.toString()).toEqual("10");
-
-        });
     });
 
 }); 

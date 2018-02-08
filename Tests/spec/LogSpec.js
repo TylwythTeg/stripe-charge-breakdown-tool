@@ -145,12 +145,97 @@ describe ("Log", function () {
         });
     });
     
+    describe("Destination Flow", function() {
+        it("The Connected Account receives its portion of the funds", function(){
+            var charge = new Charge.Destination({
+                    amount: 100,
+                    currency: "USD",
+                    customer: {
+                        country: "US",
+                    },
+                    account: {
+                        country: "US",
+                        currency: "USD"
+                    },
+                    platform: {
+                        country: "US",
+                        currency: "USD",
+                        percentFee: 10
+                    }
+            });
 
+            var log = new Log.flow.Destination(charge);
+            expect(log.events[0]).toEqual("90 USD is sent to Connected Account, leaving 10 USD for Platform");
+        });
+
+         it("The Stripe Fee is taken from the platform's portion", function(){
+            var charge = new Charge.Destination({
+                    amount: 100,
+                    currency: "USD",
+                    customer: {
+                        country: "US",
+                    },
+                    account: {
+                        country: "US",
+                        currency: "USD"
+                    },
+                    platform: {
+                        country: "US",
+                        currency: "USD",
+                        percentFee: 10
+                    }
+            });
+
+            var log = new Log.flow.Destination(charge);
+            expect(log.events[1]).toEqual("Stripe Fee of 3.2 USD is taken from Platform, leaving 6.8 USD for Platform");
+        });
+
+
+        it("If conversion to platform's currency is necessary, add two events for conversion and fees", function(){
+            var charge = new Charge.Destination({
+                    amount: 100,
+                    currency: "USD",
+                    customer: {
+                        country: "US",
+                    },
+                    account: {
+                        country: "US",
+                        currency: "USD"
+                    },
+                    platform: {
+                        country: "FR",
+                        currency: "EUR",
+                        percentFee: 10
+                    }
+            });
+            var log = new Log.flow.Destination(charge);
+            expect(log.events[2]).toEqual("6.8 USD is converted to 8.7 EUR");
+            expect(log.events[3]).toEqual("After 2% conversion fee, 8.53 EUR is left for Platform");
+        });
+
+    });
 
     
+/* Staging something */
+    var charge = new Charge.Destination({
+                    amount: 100,
+                    currency: "USD",
+                    customer: {
+                        country: "US",
+                    },
+                    account: {
+                        country: "US",
+                        currency: "USD"
+                    },
+                    platform: {
+                        country: "FR",
+                        currency: "EUR",
+                        percentFee: 10
+                    }
+            });
+    var log = new Log.Charge(charge);
+    console.log(log);
 
-
-    
 
     
     

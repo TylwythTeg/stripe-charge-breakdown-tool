@@ -6,6 +6,58 @@ var Log = (function() {
 
     }
 
+    Log.Account = function (account) {
+        this.type = "Account";
+
+        this.events = [
+            "Account:",
+            " - Country: " + account.country,
+            " - Currency: " + account.currency,
+        ];
+
+    };
+
+    Log.Platform = function (platform) {
+        this.type = "Platform";
+
+        this.events = [
+            "Platform:",
+            " - Country: " + platform.country,
+            " - Currency: " + platform.currency,
+        ];
+
+    }; 
+
+    Log.Customer = function (customer) {
+        this.type = "Customer";
+
+        this.events = [
+            "Customer:",
+            " - Country: " + customer.country,
+        ];
+
+    }; 
+
+    Log.Pricing = function (charge) {
+        this.type = "Pricing";
+
+        this.events = [
+            "Pricing: " + charge.pricing.percent + "% + " + charge.pricing.fixed,
+        ];
+
+    };
+
+    Log.StripeFee = function (charge) {
+        this.type = "StripeFee";
+
+        this.events = [
+            "Stripe Fee: " + charge.stripeFee.settlement + " (" +
+            charge.pricing.percent + "% + " + charge.stripeFee.settledFixedFee + " of " + 
+            charge.final + ")",
+        ];
+
+    };
+
     Log.Settlement = function (presentment, settlement, final) {
         this.type = "Settlement";
         this.events = [presentment + " charge created"];
@@ -19,7 +71,7 @@ var Log = (function() {
     Log.flow = {};
 
     Log.flow.Standard = function(charge) {
-        this.type = "StandardFlow";
+        this.type = "Flow";
         this.events = [
             "Stripe Fee of " + charge.stripeFee.settlement +
                 " is taken, leaving " + charge.finalAfterStripeFee,
@@ -27,7 +79,7 @@ var Log = (function() {
     };
 
     Log.flow.Direct = function(charge) {
-        this.type = "DirectFlow";
+        this.type = "Flow";
         this.events = [
             "Stripe Fee of " + charge.stripeFee.final + 
                 " is taken, leaving " + charge.amountAfterStripeFee,
@@ -43,31 +95,62 @@ var Log = (function() {
         }
     };
 
-    Log.destinationCharge = function(charge) {
-        var settlementEvents = Log.Settlement(charge.presentment, charge.settlement, charge.final);
+    Log.flow.Destination = function(charge) {
+        this.type = "Flow";
 
-        var events = [
+        this.events = [
             charge.connectedPortion + " is sent to Connected Account, leaving " +
-                charge.applicationFee.settlement + " for Platform",
-            "Stripe Fee of " + charge.stripeFee.settlement +
-                "is taken from Platform, leaving " + charge.applicationFee.afterStripeFee +
-                " for Platform",
+                charge.applicationFee.settlement + " for Platform",  
+                "Stripe Fee of " + charge.stripeFee.settlement +
+                " is taken from Platform, leaving " + 
+                (charge.applicationFee.final.afterFxFee || charge.applicationFee.final) +
+                " for Platform",         
         ];
 
         if (charge.applicationFee.conversionNecessary) {
-            events.push(charge.applicationFee.settlement.afterStripeFee + "is converted to " +
+            this.events.push(charge.applicationFee.settlement.afterStripeFee + " is converted to " +
                 charge.applicationFee.final);
-            events.push("After " + charge.platform.pricingModel.fxFee + "% conversion fee, " + 
-                charge.applicationFee.final.afterFxFee);
+            this.events.push("After " + charge.platform.pricingModel.fxPercent + "% conversion fee, " + 
+                charge.applicationFee.final.afterFxFee + " is left for Platform");
         }
 
-        return settlementEvents.concat(events);
     };
 
-    
+    Log.flow.SCT = function (charge) {
+        return Log.flow.Standard(charge);
+    };
+
+    Log.charge = {};
+
+    Log.Charge = function (charge) {
+        this.events = [];
+
+        this.pricing = new Log.Pricing(charge);
+        this.events.push(this.pricing.events);
+
+        this.stripeFee = new Log.StripeFee(charge);
+        this.events.push(this.stripeFee.events);
+
+        if (charge.connect()) {
+            this.platform = new Log.Platform(charge.platform);
+            this.events.push(this.platform.events.join("\n"));
+        }
+        this.account = new Log.Account(charge.account);
+        this.events.push(this.account.events.join("\n"));
+
+        this.customer = new Log.Customer(charge.customer);
+        this.events.push(this.customer.events.join("\n"));
+
+        this.settlement = new Log.Settlement(charge.presentment, charge.settlement, charge.final);
+        this.events.push(this.settlement.events);
+        this.paymentFlow = new Log.flow[charge.type](charge);
+        this.events.push(this.paymentFlow.events);
 
 
 
+     
+        console.log(this.events.join("\n"));
+    };
 
     return Log;
 })();
