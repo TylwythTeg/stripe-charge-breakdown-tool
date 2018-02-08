@@ -75,6 +75,75 @@ describe ("Log", function () {
             expect(log.events[0]).toEqual("Stripe Fee of 3.83 GBP is taken, leaving 121.49 GBP");
         });
     });
+
+    describe("Direct Flow", function() {
+        it("The Stripe fee is taken first from charge's funds", function(){
+            var charge = new Charge.Direct({
+                    amount: 100,
+                    currency: "USD",
+                    customer: {
+                        country: "US",
+                    },
+                    account: {
+                        country: "US",
+                        currency: "USD"
+                    },
+                    platform: {
+                        country: "US",
+                        currency: "USD",
+                        percentFee: 10
+                    }
+            });
+
+            var log = new Log.flow.Direct(charge);
+            expect(log.events[0]).toEqual("Stripe Fee of 3.2 USD is taken, leaving 96.8 USD");
+            expect(log.events[1]).toEqual("Application Fee of 10 USD is sent to Platform, leaving 86.8 USD for Connected Account");
+        });
+
+        it("The application Fee is sent to the platform", function(){
+            var charge = new Charge.Direct({
+                    amount: 100,
+                    currency: "USD",
+                    customer: {
+                        country: "US",
+                    },
+                    account: {
+                        country: "US",
+                        currency: "USD"
+                    },
+                    platform: {
+                        country: "US",
+                        currency: "USD",
+                        percentFee: 10
+                    }
+            });
+
+            var log = new Log.flow.Direct(charge);
+            expect(log.events[1]).toEqual("Application Fee of 10 USD is sent to Platform, leaving 86.8 USD for Connected Account");
+        });
+
+        it("If conversion to platform's currency is necessary, add two events for conversion and fees", function(){
+            var charge = new Charge.Direct({
+                    amount: 100,
+                    currency: "USD",
+                    customer: {
+                        country: "US",
+                    },
+                    account: {
+                        country: "US",
+                        currency: "USD"
+                    },
+                    platform: {
+                        country: "FR",
+                        currency: "EUR",
+                        percentFee: 10
+                    }
+            });
+            var log = new Log.flow.Direct(charge);
+            expect(log.events[2]).toEqual("10 USD is converted to 12.79 EUR");
+            expect(log.events[3]).toEqual("After 2% conversion fee, 12.53 EUR is left for Platform");
+        });
+    });
     
 
 

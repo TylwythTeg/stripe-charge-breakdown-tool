@@ -67,8 +67,8 @@ var Charge = (function() {
         settleFunds.call(this);
 
         this.amountAfterStripeFee = this.final.minus(this.stripeFee.final);
-        this.platform.applicationFee = new Fee.Application(this.platform, this, this.type);
-        this.connectedPortion = this.amountAfterStripeFee.minus(this.platform.applicationFee.settlement);
+        this.applicationFee = new Fee.Application(this.platform, this, this.type);
+        this.connectedPortion = this.amountAfterStripeFee.minus(this.applicationFee.settlement);
     };
 
     Charge.Destination = function(options) {
@@ -76,10 +76,10 @@ var Charge = (function() {
         initializeCharge.call(this, options);
         settleFunds.call(this);
 
-        this.platform.applicationFee = new Fee.Application(this.platform, this, this.type);
+        this.applicationFee = new Fee.Application(this.platform, this, this.type);
 
         var final = this.final.afterFxFee || this.final;
-        this.connectedPortion = final.minus(this.platform.applicationFee.settlement);
+        this.connectedPortion = final.minus(this.applicationFee.settlement);
     };
 
     

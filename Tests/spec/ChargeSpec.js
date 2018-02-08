@@ -102,7 +102,7 @@ describe ("Charge", function () {
                         percentFee: 10
                     }
             });
-            expect(myCharge.platform.applicationFee.final.amount.toString()).toEqual("10");
+            expect(myCharge.applicationFee.final.amount.toString()).toEqual("10");
 
             var myCharge = new Charge.Direct({
                     amount: 100,
@@ -120,8 +120,8 @@ describe ("Charge", function () {
                         percentFee: 10
                     }
             });
-            expect(myCharge.platform.applicationFee.final.amount.toString()).toEqual("12.79");
-            expect(myCharge.platform.applicationFee.final.afterFxFee.amount.toString()).toEqual("12.53");
+            expect(myCharge.applicationFee.final.amount.toString()).toEqual("12.79");
+            expect(myCharge.applicationFee.final.afterFxFee.amount.toString()).toEqual("12.53");
 
 
 
@@ -199,7 +199,7 @@ describe ("Charge", function () {
             });
             var amountMinusStripeFee = myCharge.final.minus(myCharge.stripeFee.settlement);
             expect(amountMinusStripeFee.amount.toNumber()).toEqual(96.8);
-            expect(myCharge.platform.applicationFee.settlement.amount.toNumber()).toEqual(10);
+            expect(myCharge.applicationFee.settlement.amount.toNumber()).toEqual(10);
 
 
           });
@@ -231,41 +231,41 @@ describe ("Charge", function () {
 
         it("Uses the connected account's pricing, but is based on relationship between platform and customer", function () {
 
-        var myCharge = new Charge.SCT({
-                amount: 100,
-                currency: "USD",
-                customer: {
-                    country: "US",
-                },
-                account: {
-                    country: "US",
-                    currency: "USD"
-                },
-                platform: {
-                    country: "FR",
-                    currency: "EUR",
-                    percentFee: 10
-                }
-        });
-        expect(myCharge.pricing.toString()).toEqual("3.9 + 0.3 USD");
+            var myCharge = new Charge.SCT({
+                    amount: 100,
+                    currency: "USD",
+                    customer: {
+                        country: "US",
+                    },
+                    account: {
+                        country: "US",
+                        currency: "USD"
+                    },
+                    platform: {
+                        country: "FR",
+                        currency: "EUR",
+                        percentFee: 10
+                    }
+            });
+            expect(myCharge.pricing.toString()).toEqual("3.9 + 0.3 USD");
 
-        var myCharge = new Charge.SCT({
-                amount: 100,
-                currency: "USD",
-                customer: {
-                    country: "GB",
-                },
-                account: {
-                    country: "US",
-                    currency: "USD"
-                },
-                platform: {
-                    country: "FR",
-                    currency: "EUR",
-                    percentFee: 10
-                }
-        });
-        expect(myCharge.pricing.toString()).toEqual("2.9 + 0.3 USD");
+            var myCharge = new Charge.SCT({
+                    amount: 100,
+                    currency: "USD",
+                    customer: {
+                        country: "GB",
+                    },
+                    account: {
+                        country: "US",
+                        currency: "USD"
+                    },
+                    platform: {
+                        country: "FR",
+                        currency: "EUR",
+                        percentFee: 10
+                    }
+            });
+            expect(myCharge.pricing.toString()).toEqual("2.9 + 0.3 USD");
         });
     });
 });

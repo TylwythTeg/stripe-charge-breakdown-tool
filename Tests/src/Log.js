@@ -32,14 +32,14 @@ var Log = (function() {
             "Stripe Fee of " + charge.stripeFee.final + 
                 " is taken, leaving " + charge.amountAfterStripeFee,
             "Application Fee of " + charge.applicationFee.settlement + 
-                " is sent to platform, leaving " + charge.connectedPortion + " for Connected Account",
+                " is sent to Platform, leaving " + charge.connectedPortion + " for Connected Account",
         ];
 
         if (charge.applicationFee.conversionNecessary) {
-            this.events.push(charge.applicationFee.settlement + "is converted to " +
+            this.events.push(charge.applicationFee.settlement + " is converted to " +
                 charge.applicationFee.final);
-            this.events.push("After " + charge.platform.pricingModel.fxFee + "% conversion fee, " + 
-                charge.applicationFee.final.afterFxFee);
+            this.events.push("After " + charge.platform.pricingModel.fxPercent + "% conversion fee, " + 
+                charge.applicationFee.final.afterFxFee + " is left for Platform");
         }
     };
 
