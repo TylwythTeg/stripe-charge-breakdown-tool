@@ -1,11 +1,5 @@
 var Log = (function() {
 
-    /* pick a function based on charge.type? */
-    /* So we create a charge instance and go Log(charge.type) and we're done */
-    function Log(charge) {
-
-    }
-
     Log.Account = function (account) {
         this.type = "Account";
 
