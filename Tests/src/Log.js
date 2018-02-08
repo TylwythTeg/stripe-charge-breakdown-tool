@@ -8,7 +8,6 @@ var Log = (function() {
 
     Log.settlement = function (presentment, settlement, final) {
         var events = [presentment + " charge created"];
-
         if (!presentment.equals(settlement)) {
             events.push(presentment + " converted to " + settlement);
             events.push("After " + final.fxPercent + "% conversion fee, " +
@@ -17,6 +16,7 @@ var Log = (function() {
         return events;
     };
 
+    /* Log.directFlow, Log.destinationFlow, Log.standardFlow ?*/
     Log.directCharge = function(charge) {
         var settlementEvents = Log.Settlement(charge.presentment, charge.settlement, charge.final);
 
