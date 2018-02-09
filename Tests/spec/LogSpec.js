@@ -581,6 +581,20 @@ describe ("Log", function () {
     var log = new Log.Charge(charge);
     console.log(log);
 
+    var charge = new Charge.Standard({
+                    amount: 100,
+                    currency: "AUD",
+                    customer: {
+                        country: "AU",
+                    },
+                    account: {
+                        country: "AU",
+                        currency: "AUD"
+                    },
+            });
+    var log = new Log.Charge(charge);
+    console.log(log);
+
     //etc
 
 }); 

@@ -48,8 +48,13 @@ var Log = (function() {
     Log.StripeFee = function (charge) {
         this.type = "StripeFee";
 
+        /* This is to account for the weirdnness in how gst vs vat affects stripe fee */
+        var transactionFee = Fee.VAT.applicable(charge.account.country) ?
+            charge.stripeFee.settlement :
+            charge.stripeFee.final
+
         this.events = [
-            "Stripe Fee: " + charge.stripeFee.final + " (" +
+            "Stripe Fee: " + transactionFee + " (" +
             charge.pricing.percent + "% + " + charge.stripeFee.settledFixedFee + " of " + 
             charge.final + ")",
         ];
