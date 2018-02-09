@@ -49,13 +49,13 @@ var Log = (function() {
         this.type = "StripeFee";
 
         this.events = [
-            "Stripe Fee: " + charge.stripeFee.settlement + " (" +
+            "Stripe Fee: " + charge.stripeFee.final + " (" +
             charge.pricing.percent + "% + " + charge.stripeFee.settledFixedFee + " of " + 
             charge.final + ")",
         ];
 
         if (Fee.GST.applicable(charge.account.country)) {
-            this.events.push("GST: " + charge.stripeFee.GSTPortion + " of the " + charge.stripeFee.settlement + " Stripe Fee is included as GST");
+            this.events.push("GST: " + charge.stripeFee.GSTPortion + " of the " + charge.stripeFee.final + " Stripe Fee is included as GST");
         }
 
         if (Fee.VAT.applicable(charge.account.country)) {
@@ -90,7 +90,7 @@ var Log = (function() {
     Log.flow.Standard = function(charge) {
         this.type = "Flow";
         this.events = [
-            "1. Stripe Fee of " + charge.stripeFee.settlement +
+            "1. Stripe Fee of " + charge.stripeFee.final +
                 " is taken, leaving " + charge.finalAfterStripeFee,
         ];
     };
@@ -118,7 +118,7 @@ var Log = (function() {
         this.events = [
             "1. " + charge.connectedPortion + " is sent to Connected Account, leaving " +
                 charge.applicationFee.settlement + " for Platform",  
-                "2. Stripe Fee of " + charge.stripeFee.settlement +
+                "2. Stripe Fee of " + charge.stripeFee.final +
                 " is taken from Platform, leaving " + 
                 charge.applicationFee.settlement.afterStripeFee +
                 " for Platform",         
