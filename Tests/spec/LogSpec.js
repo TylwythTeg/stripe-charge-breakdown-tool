@@ -2,14 +2,6 @@ describe ("Log", function () {
 
     describe("Settlement", function () {
         it("Defines the charge that was was settled with an array of one string for the event", function() {
-            var log = new Log.Settlement(
-                new Money(100, "USD"),
-                new Money(100, "USD"),
-                new Money(100, "USD"),        
-            );
-            expect(log.events.length).toEqual(1);
-            expect(log.events[0]).toEqual("100 USD charge created");
-
             var charge = new Charge.Standard({
                     amount: 100,
                     currency: "USD",
@@ -21,25 +13,27 @@ describe ("Log", function () {
                         currency: "USD"
                     }
             });
-            var log = new Log.Settlement(charge.presentment, charge.settlement, charge.final);
+            var log = new Log.Settlement(charge);
             expect(log.events.length).toEqual(1);
-            expect(log.events[0]).toEqual("100 USD charge created");
+            expect(log.events[0]).toEqual("100 USD charge created on Account");
 
         });
 
-        it("If conversion was necessary, adds two events to describe conversion and the conversion fee taken", function() {
-            var log = new Log.Settlement(
-                new Money(100, "USD"),
-                new Money(122, "EUR"),
-                {
-                    amount: 98,
-                    currency: "EUR",
-                    fxPercent: 2,
-                    toString: function () {return "98 EUR";},
-                },
-            );
-            expect(log.events[1]).toEqual("100 USD converted to 122 EUR");
-            expect(log.events[2]).toEqual("After 2% conversion fee, 98 EUR is left");
+        it("If conversion was necessary, adds two events to describe conversion and the conversion fee taken", function() { 
+            var charge = new Charge.Standard({
+                    amount: 100,
+                    currency: "USD",
+                    customer: {
+                        country: "US",
+                    },
+                    account: {
+                        country: "FR",
+                        currency: "EUR"
+                    }
+            });
+            var log = new Log.Settlement(charge);
+            expect(log.events[1]).toEqual("100 USD converted to 127.88 EUR");
+            expect(log.events[2]).toEqual("After 2% conversion fee, 125.32 EUR is left");
 
             var charge = new Charge.Standard({
                     amount: 100,
@@ -52,7 +46,7 @@ describe ("Log", function () {
                         currency: "GBP"
                     }
             });
-            var log = new Log.Settlement(charge.presentment, charge.settlement, charge.final);
+            var log = new Log.Settlement(charge);
             expect(log.events[1]).toEqual("100 USD converted to 127.88 GBP");
             expect(log.events[2]).toEqual("After 2% conversion fee, 125.32 GBP is left");
         });
@@ -236,7 +230,24 @@ describe ("Log", function () {
     var log = new Log.Charge(charge);
     console.log(log);
 
-
+    var charge = new Charge.Destination({
+                    amount: 100,
+                    currency: "USD",
+                    customer: {
+                        country: "US",
+                    },
+                    account: {
+                        country: "US",
+                        currency: "USD"
+                    },
+                    platform: {
+                        country: "US",
+                        currency: "USD",
+                        percentFee: 10
+                    }
+            });
+    var log = new Log.Charge(charge);
+    console.log(log);
     
     
 

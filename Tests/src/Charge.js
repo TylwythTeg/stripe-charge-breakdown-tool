@@ -4,7 +4,13 @@ var Charge = (function() {
         return type !== "Standard";
     }
 
-    var Charge = {};
+    var Charge = function () {
+
+    };
+
+    Charge.prototype.connect = function(type) {
+        return this.type !== "Standard";
+    };
 
 
     function getPricing() {
@@ -68,6 +74,7 @@ var Charge = (function() {
 
     Charge.Direct = function(options) {
         this.type = "Direct";
+        this.processedOn = "Connected Account";
         initializeCharge.call(this, options);
         settleFunds.call(this);
 
@@ -78,6 +85,7 @@ var Charge = (function() {
 
     Charge.Destination = function(options) {
         this.type = "Destination";
+        this.processedOn = "Platform";
         initializeCharge.call(this, options);
         settleFunds.call(this);
 
@@ -91,6 +99,7 @@ var Charge = (function() {
 
     Charge.SCT = function(options) {
         this.type = "SCT";
+        this.processedOn = "Platform";
         initializeCharge.call(this, options);
         settleFunds.call(this);
         /* What happens left is up to user. Transfer() methods for some reason? */
@@ -98,6 +107,7 @@ var Charge = (function() {
 
     Charge.Standard = function(options) {
         this.type = "Standard";
+        this.processedOn = "Account";
         initializeCharge.call(this, options);
         settleFunds.call(this);
 

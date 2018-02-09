@@ -1,5 +1,9 @@
 var Log = (function() {
 
+    function Log() {
+
+    }
+
     Log.Account = function (account) {
         this.type = "Account";
 
@@ -52,13 +56,14 @@ var Log = (function() {
 
     };
 
-    Log.Settlement = function (presentment, settlement, final) {
+    Log.Settlement = function (charge) {
         this.type = "Settlement";
-        this.events = [presentment + " charge created"];
-        if (!presentment.equals(settlement)) {
-            this.events.push(presentment + " converted to " + settlement);
-            this.events.push("After " + final.fxPercent + "% conversion fee, " +
-                final + " is left");
+        var location = 
+        this.events = [charge.presentment + " charge created on " + charge.processedOn];
+        if (!charge.presentment.equals(charge.settlement)) {
+            this.events.push(charge.presentment + " converted to " + charge.settlement);
+            this.events.push("After " + charge.final.fxPercent + "% conversion fee, " +
+                charge.final + " is left");
         }
     };
 
@@ -119,26 +124,27 @@ var Log = (function() {
     Log.Charge = function (charge) {
         this.events = [];
 
+        if (charge.connect()) {
+            this.platform = new Log.Platform(charge.platform);
+            this.events.push(this.platform.events.join("\n") + "\n");
+        }
+        this.account = new Log.Account(charge.account);
+        this.events.push(this.account.events.join("\n") + "\n");
+
+        this.customer = new Log.Customer(charge.customer);
+        this.events.push(this.customer.events.join("\n") + "\n");
+
         this.pricing = new Log.Pricing(charge);
         this.events.push(this.pricing.events);
 
         this.stripeFee = new Log.StripeFee(charge);
-        this.events.push(this.stripeFee.events);
+        this.events.push(this.stripeFee.events + "\n");
 
-        if (charge.connect()) {
-            this.platform = new Log.Platform(charge.platform);
-            this.events.push(this.platform.events.join("\n"));
-        }
-        this.account = new Log.Account(charge.account);
-        this.events.push(this.account.events.join("\n"));
-
-        this.customer = new Log.Customer(charge.customer);
-        this.events.push(this.customer.events.join("\n"));
-
-        this.settlement = new Log.Settlement(charge.presentment, charge.settlement, charge.final);
+        this.settlement = new Log.Settlement(charge);
         this.events.push(this.settlement.events);
+
         this.paymentFlow = new Log.flow[charge.type](charge);
-        this.events.push(this.paymentFlow.events);
+        this.events.push(this.paymentFlow.events.join("\n"));
 
 
 
