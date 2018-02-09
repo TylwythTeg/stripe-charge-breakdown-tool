@@ -15,7 +15,7 @@ describe ("Log", function () {
             });
             var log = new Log.Settlement(charge);
             expect(log.events.length).toEqual(1);
-            expect(log.events[0]).toEqual("100 USD charge created on Account");
+            expect(log.events[0]).toEqual("1. 100 USD charge created on Account");
 
         });
 
@@ -32,8 +32,8 @@ describe ("Log", function () {
                     }
             });
             var log = new Log.Settlement(charge);
-            expect(log.events[1]).toEqual("100 USD converted to 127.88 EUR");
-            expect(log.events[2]).toEqual("After 2% conversion fee, 125.32 EUR is left");
+            expect(log.events[1]).toEqual("2. 100 USD converted to 127.88 EUR");
+            expect(log.events[2]).toEqual("2a. After 2% conversion fee, 125.32 EUR is left");
 
             var charge = new Charge.Standard({
                     amount: 100,
@@ -47,8 +47,8 @@ describe ("Log", function () {
                     }
             });
             var log = new Log.Settlement(charge);
-            expect(log.events[1]).toEqual("100 USD converted to 127.88 GBP");
-            expect(log.events[2]).toEqual("After 2% conversion fee, 125.32 GBP is left");
+            expect(log.events[1]).toEqual("2. 100 USD converted to 127.88 GBP");
+            expect(log.events[2]).toEqual("2a. After 2% conversion fee, 125.32 GBP is left");
         });
     });
 
@@ -66,7 +66,7 @@ describe ("Log", function () {
                     }
             });
             var log = new Log.flow.Standard(charge);
-            expect(log.events[0]).toEqual("Stripe Fee of 3.83 GBP is taken, leaving 121.49 GBP");
+            expect(log.events[0]).toEqual("1. Stripe Fee of 3.83 GBP is taken, leaving 121.49 GBP");
         });
     });
 
@@ -90,8 +90,8 @@ describe ("Log", function () {
             });
 
             var log = new Log.flow.Direct(charge);
-            expect(log.events[0]).toEqual("Stripe Fee of 3.2 USD is taken, leaving 96.8 USD");
-            expect(log.events[1]).toEqual("Application Fee of 10 USD is sent to Platform, leaving 86.8 USD for Connected Account");
+            expect(log.events[0]).toEqual("1. Stripe Fee of 3.2 USD is taken, leaving 96.8 USD");
+            expect(log.events[1]).toEqual("2. Application Fee of 10 USD is sent to Platform, leaving 86.8 USD for Connected Account");
         });
 
         it("The application Fee is sent to the platform", function(){
@@ -113,7 +113,7 @@ describe ("Log", function () {
             });
 
             var log = new Log.flow.Direct(charge);
-            expect(log.events[1]).toEqual("Application Fee of 10 USD is sent to Platform, leaving 86.8 USD for Connected Account");
+            expect(log.events[1]).toEqual("2. Application Fee of 10 USD is sent to Platform, leaving 86.8 USD for Connected Account");
         });
 
         it("If conversion to platform's currency is necessary, add two events for conversion and fees", function(){
@@ -134,8 +134,8 @@ describe ("Log", function () {
                     }
             });
             var log = new Log.flow.Direct(charge);
-            expect(log.events[2]).toEqual("10 USD is converted to 12.79 EUR");
-            expect(log.events[3]).toEqual("After 2% conversion fee, 12.53 EUR is left for Platform");
+            expect(log.events[2]).toEqual("3. 10 USD is converted to 12.79 EUR");
+            expect(log.events[3]).toEqual("3a. After 2% conversion fee, 12.53 EUR is left for Platform");
         });
     });
     
@@ -159,7 +159,7 @@ describe ("Log", function () {
             });
 
             var log = new Log.flow.Destination(charge);
-            expect(log.events[0]).toEqual("90 USD is sent to Connected Account, leaving 10 USD for Platform");
+            expect(log.events[0]).toEqual("1. 90 USD is sent to Connected Account, leaving 10 USD for Platform");
         });
 
          it("The Stripe Fee is taken from the platform's portion", function(){
@@ -181,7 +181,7 @@ describe ("Log", function () {
             });
 
             var log = new Log.flow.Destination(charge);
-            expect(log.events[1]).toEqual("Stripe Fee of 3.2 USD is taken from Platform, leaving 6.8 USD for Platform");
+            expect(log.events[1]).toEqual("2. Stripe Fee of 3.2 USD is taken from Platform, leaving 6.8 USD for Platform");
         });
 
 
@@ -203,8 +203,8 @@ describe ("Log", function () {
                     }
             });
             var log = new Log.flow.Destination(charge);
-            expect(log.events[2]).toEqual("6.8 USD is converted to 8.7 EUR");
-            expect(log.events[3]).toEqual("After 2% conversion fee, 8.53 EUR is left for Platform");
+            expect(log.events[2]).toEqual("3. 6.8 USD is converted to 8.7 EUR");
+            expect(log.events[3]).toEqual("3a. After 2% conversion fee, 8.53 EUR is left for Platform");
         });
 
     });
@@ -248,8 +248,185 @@ describe ("Log", function () {
             });
     var log = new Log.Charge(charge);
     console.log(log);
+
+    var charge = new Charge.Destination({
+                    amount: 100,
+                    currency: "USD",
+                    customer: {
+                        country: "GB",
+                    },
+                    account: {
+                        country: "FR",
+                        currency: "EUR"
+                    },
+                    platform: {
+                        country: "US",
+                        currency: "USD",
+                        percentFee: 10
+                    }
+            });
+    var log = new Log.Charge(charge);
+    console.log(log);
+
+     var charge = new Charge.Standard({
+                    amount: 100,
+                    currency: "USD",
+                    customer: {
+                        country: "GB",
+                    },
+                    account: {
+                        country: "FR",
+                        currency: "EUR"
+                    },
+            });
+    var log = new Log.Charge(charge);
+    console.log(log);
+
+
+
+    /* Staging something */
+    var charge = new Charge.Direct({
+                    amount: 100,
+                    currency: "USD",
+                    customer: {
+                        country: "US",
+                    },
+                    account: {
+                        country: "US",
+                        currency: "USD"
+                    },
+                    platform: {
+                        country: "FR",
+                        currency: "EUR",
+                        percentFee: 10
+                    }
+            });
+    var log = new Log.Charge(charge);
+    console.log(log);
+
+    var charge = new Charge.Direct({
+                    amount: 100,
+                    currency: "USD",
+                    customer: {
+                        country: "US",
+                    },
+                    account: {
+                        country: "US",
+                        currency: "USD"
+                    },
+                    platform: {
+                        country: "US",
+                        currency: "USD",
+                        percentFee: 10
+                    }
+            });
+    var log = new Log.Charge(charge);
+    console.log(log);
+
+    var charge = new Charge.Direct({
+                    amount: 100,
+                    currency: "USD",
+                    customer: {
+                        country: "GB",
+                    },
+                    account: {
+                        country: "FR",
+                        currency: "EUR"
+                    },
+                    platform: {
+                        country: "US",
+                        currency: "USD",
+                        percentFee: 10
+                    }
+            });
+    var log = new Log.Charge(charge);
+    console.log(log);
     
-    
+        /* Staging something */
+    var charge = new Charge.SCT({
+                    amount: 100,
+                    currency: "USD",
+                    customer: {
+                        country: "US",
+                    },
+                    account: {
+                        country: "US",
+                        currency: "USD"
+                    },
+                    platform: {
+                        country: "FR",
+                        currency: "EUR",
+                        percentFee: 10
+                    }
+            });
+    var log = new Log.Charge(charge);
+    console.log(log);
+
+    var charge = new Charge.SCT({
+                    amount: 100,
+                    currency: "USD",
+                    customer: {
+                        country: "US",
+                    },
+                    account: {
+                        country: "US",
+                        currency: "USD"
+                    },
+                    platform: {
+                        country: "US",
+                        currency: "USD",
+                        percentFee: 10
+                    }
+            });
+    var log = new Log.Charge(charge);
+    console.log(log);
+
+    var charge = new Charge.SCT({
+                    amount: 100,
+                    currency: "USD",
+                    customer: {
+                        country: "GB",
+                    },
+                    account: {
+                        country: "FR",
+                        currency: "EUR"
+                    },
+                    platform: {
+                        country: "US",
+                        currency: "USD",
+                        percentFee: 10
+                    }
+            });
+    var log = new Log.Charge(charge);
+    console.log(log);
+
+    var charge = new Charge.Standard({
+                    amount: 100,
+                    currency: "AUD",
+                    customer: {
+                        country: "AU",
+                    },
+                    account: {
+                        country: "AU",
+                        currency: "AUD"
+                    },
+            });
+    var log = new Log.Charge(charge);
+    console.log(log);
+
+    var charge = new Charge.Standard({
+                    amount: 100,
+                    currency: "EUR",
+                    customer: {
+                        country: "IE",
+                    },
+                    account: {
+                        country: "IE",
+                        currency: "EUR"
+                    },
+            });
+    var log = new Log.Charge(charge);
+    console.log(log);
 
     //etc
 

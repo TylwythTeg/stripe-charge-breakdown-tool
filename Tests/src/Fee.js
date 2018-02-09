@@ -32,6 +32,10 @@ var Fee = (function() {
             new Money(0,stripeFeeSettlement.currency);
     }
 
+    VAT.applicable = function(country) {
+        return (country === "IE");
+    };
+
     var GST = (function () {
 
         function GST(stripeFeeSettlement, accountCountry) {
@@ -49,6 +53,10 @@ var Fee = (function() {
                 roundedPortions(roundedStripe, roundedTax, stripeFeeSettlement) :
                 flooredPortions(flooredStripe, roundedStripe, flooredTax, stripeFeeSettlement);
         }
+
+        GST.applicable = function(country) {
+            return (country === "AU");
+        };
 
 
         function applicable(country) {

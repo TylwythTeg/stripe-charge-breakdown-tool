@@ -54,15 +54,33 @@ var Log = (function() {
             charge.final + ")",
         ];
 
+        if (Fee.GST.applicable(charge.account.country)) {
+            this.events.push("GST: " + charge.stripeFee.GSTPortion + " of the " + charge.stripeFee.settlement + " Stripe Fee is included as GST");
+        }
+
+        if (Fee.VAT.applicable(charge.account.country)) {
+            this.events.push("VAT: " + charge.stripeFee.vat + " is added as VAT to Stripe Fee of " + charge.stripeFee.settlement + ", for a total fee of " + charge.stripeFee.final);
+        }
+
+    };
+
+    Log.ApplicationFee = function (charge) {
+        this.type = "ApplicationFee";
+
+        this.events = [
+            "Application Fee: " + charge.applicationFee.presentment + " (" +
+            charge.applicationFee.settlement + ")",
+        ];
+
     };
 
     Log.Settlement = function (charge) {
         this.type = "Settlement";
         var location = 
-        this.events = [charge.presentment + " charge created on " + charge.processedOn];
+        this.events = ["1. " + charge.presentment + " charge created on " + charge.processedOn];
         if (!charge.presentment.equals(charge.settlement)) {
-            this.events.push(charge.presentment + " converted to " + charge.settlement);
-            this.events.push("After " + charge.final.fxPercent + "% conversion fee, " +
+            this.events.push("2. " + charge.presentment + " converted to " + charge.settlement);
+            this.events.push("2a. After " + charge.final.fxPercent + "% conversion fee, " +
                 charge.final + " is left");
         }
     };
@@ -72,7 +90,7 @@ var Log = (function() {
     Log.flow.Standard = function(charge) {
         this.type = "Flow";
         this.events = [
-            "Stripe Fee of " + charge.stripeFee.settlement +
+            "1. Stripe Fee of " + charge.stripeFee.settlement +
                 " is taken, leaving " + charge.finalAfterStripeFee,
         ];
     };
@@ -80,16 +98,16 @@ var Log = (function() {
     Log.flow.Direct = function(charge) {
         this.type = "Flow";
         this.events = [
-            "Stripe Fee of " + charge.stripeFee.final + 
+            "1. Stripe Fee of " + charge.stripeFee.final + 
                 " is taken, leaving " + charge.amountAfterStripeFee,
-            "Application Fee of " + charge.applicationFee.settlement + 
+            "2. Application Fee of " + charge.applicationFee.settlement + 
                 " is sent to Platform, leaving " + charge.connectedPortion + " for Connected Account",
         ];
 
         if (charge.applicationFee.conversionNecessary) {
-            this.events.push(charge.applicationFee.settlement + " is converted to " +
+            this.events.push("3. " + charge.applicationFee.settlement + " is converted to " +
                 charge.applicationFee.final);
-            this.events.push("After " + charge.platform.pricingModel.fxPercent + "% conversion fee, " + 
+            this.events.push("3a. After " + charge.platform.pricingModel.fxPercent + "% conversion fee, " + 
                 charge.applicationFee.final.afterFxFee + " is left for Platform");
         }
     };
@@ -98,18 +116,18 @@ var Log = (function() {
         this.type = "Flow";
 
         this.events = [
-            charge.connectedPortion + " is sent to Connected Account, leaving " +
+            "1. " + charge.connectedPortion + " is sent to Connected Account, leaving " +
                 charge.applicationFee.settlement + " for Platform",  
-                "Stripe Fee of " + charge.stripeFee.settlement +
+                "2. Stripe Fee of " + charge.stripeFee.settlement +
                 " is taken from Platform, leaving " + 
-                (charge.applicationFee.final.afterFxFee || charge.applicationFee.final) +
+                charge.applicationFee.settlement.afterStripeFee +
                 " for Platform",         
         ];
 
         if (charge.applicationFee.conversionNecessary) {
-            this.events.push(charge.applicationFee.settlement.afterStripeFee + " is converted to " +
+            this.events.push("3. " + charge.applicationFee.settlement.afterStripeFee + " is converted to " +
                 charge.applicationFee.final);
-            this.events.push("After " + charge.platform.pricingModel.fxPercent + "% conversion fee, " + 
+            this.events.push("3a. After " + charge.platform.pricingModel.fxPercent + "% conversion fee, " + 
                 charge.applicationFee.final.afterFxFee + " is left for Platform");
         }
 
@@ -138,12 +156,21 @@ var Log = (function() {
         this.events.push(this.pricing.events);
 
         this.stripeFee = new Log.StripeFee(charge);
-        this.events.push(this.stripeFee.events + "\n");
+        this.events.push(this.stripeFee.events.join("\n"));
+
+        if(charge.connect() && charge.type !== "SCT") {
+            this.applicationFee = new Log.ApplicationFee(charge);
+            this.events.push(this.applicationFee.events); 
+        }
+
+        
 
         this.settlement = new Log.Settlement(charge);
-        this.events.push(this.settlement.events);
+        this.events.push("\n" + this.settlement.events.join("\n") + "\n");
 
-        this.paymentFlow = new Log.flow[charge.type](charge);
+        this.paymentFlow = (charge.type === "SCT") ? new Log.flow.Standard(charge) :
+            new Log.flow[charge.type](charge);
+
         this.events.push(this.paymentFlow.events.join("\n"));
 
 

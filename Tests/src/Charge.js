@@ -102,6 +102,7 @@ var Charge = (function() {
         this.processedOn = "Platform";
         initializeCharge.call(this, options);
         settleFunds.call(this);
+        this.finalAfterStripeFee = this.final.minus(this.stripeFee.final);
         /* What happens left is up to user. Transfer() methods for some reason? */
     };
 
