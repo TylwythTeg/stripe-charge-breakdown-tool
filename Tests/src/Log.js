@@ -9,8 +9,8 @@ var Log = (function() {
 
         this.events = [
             "Account:",
-            " - Country: " + account.country,
-            " - Currency: " + account.currency,
+            "- Country: " + account.country,
+            "- Currency: " + account.currency,
         ];
 
     };
@@ -20,8 +20,8 @@ var Log = (function() {
 
         this.events = [
             "Platform:",
-            " - Country: " + platform.country,
-            " - Currency: " + platform.currency,
+            "- Country: " + platform.country,
+            "- Currency: " + platform.currency,
         ];
 
     }; 
@@ -31,7 +31,7 @@ var Log = (function() {
 
         this.events = [
             "Customer:",
-            " - Country: " + customer.country,
+            "- Country: " + customer.country,
         ];
 
     }; 

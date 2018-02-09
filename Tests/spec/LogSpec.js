@@ -1,5 +1,158 @@
 describe ("Log", function () {
 
+    describe("Platform, Account, Customer", function () {
+        it("Describes the Accounts, Platforms, and Customers on a charge", function () {
+            var account = new Account("US", "USD");
+            var log = new Log.Account(account);
+            expect(log.events[0]).toEqual("Account:");
+            expect(log.events[1]).toEqual("- Country: US");
+            expect(log.events[2]).toEqual("- Currency: USD");
+
+            var platform = new Platform("US", "USD", 10);
+            var log = new Log.Platform(account);
+            expect(log.events[0]).toEqual("Platform:");
+            expect(log.events[1]).toEqual("- Country: US");
+            expect(log.events[2]).toEqual("- Currency: USD");
+
+            var customer = new Customer("US");
+            var log = new Log.Customer(account);
+            expect(log.events[0]).toEqual("Customer:");
+            expect(log.events[1]).toEqual("- Country: US");
+        });
+    });
+
+    describe("Pricing", function () {
+        it("Describes the pricing that was chosen for the transaction", function () {
+            var charge = new Charge.Standard({
+                    amount: 100,
+                    currency: "USD",
+                    customer: {
+                        country: "US",
+                    },
+                    account: {
+                        country: "US",
+                        currency: "USD"
+                    }
+
+            });
+            var log = new Log.Pricing(charge);
+            expect(log.events[0]).toEqual("Pricing: 2.9% + 0.3 USD");
+        });    
+    });
+
+    describe("Stripe Fee", function () {
+        it("Describes the Stripe Fee as well as how that amount was derived", function () {
+            var charge = new Charge.Standard({
+                    amount: 100,
+                    currency: "USD",
+                    customer: {
+                        country: "US",
+                    },
+                    account: {
+                        country: "US",
+                        currency: "USD"
+                    }
+
+            });
+            var log = new Log.StripeFee(charge);
+            expect(log.events[0]).toEqual("Stripe Fee: 3.2 USD (2.9% + 0.3 USD of 100 USD)");
+        });
+
+        it("If pricing currency doesn't match the account's default currency, we account for that", function () {
+            var charge = new Charge.Standard({
+                    amount: 100,
+                    currency: "USD",
+                    customer: {
+                        country: "US",
+                    },
+                    account: {
+                        country: "US",
+                        currency: "GBP"
+                    }
+
+            });
+            var log = new Log.StripeFee(charge);
+            expect(log.events[0]).toEqual("Stripe Fee: 4.05 GBP (2.9% + 0.38 GBP of 126.6 GBP)");
+        });
+
+        it("GST is expressed as a portion of the Stripe Fee if applicable", function () {
+            var charge = new Charge.Standard({
+                    amount: 100,
+                    currency: "AUD",
+                    customer: {
+                        country: "AU",
+                    },
+                    account: {
+                        country: "AU",
+                        currency: "AUD"
+                    }
+
+            });
+            var log = new Log.StripeFee(charge);
+            expect(log.events[1]).toEqual("GST: 0.19 AUD of the 2.05 AUD Stripe Fee is included as GST");
+        });
+
+        it("VAT is expressed as an addition to the Stripe Fee if applicable", function () {
+            var charge = new Charge.Standard({
+                    amount: 100,
+                    currency: "EUR",
+                    customer: {
+                        country: "IE",
+                    },
+                    account: {
+                        country: "IE",
+                        currency: "EUR"
+                    }
+
+            });
+            var log = new Log.StripeFee(charge);
+            expect(log.events[1]).toEqual("VAT: 0.38 EUR is added as VAT to Stripe Fee of " +
+                "1.65 EUR, for a total fee of 2.03 EUR");
+        });      
+    });
+
+    describe("Application Fee", function() {
+        it("Describes Application Fee as the specified presented currency and the settled amount", function(){
+            var charge = new Charge.Direct({
+                    amount: 100,
+                    currency: "USD",
+                    customer: {
+                        country: "US",
+                    },
+                    account: {
+                        country: "US",
+                        currency: "USD"
+                    },
+                    platform: {
+                        country: "US",
+                        currency: "USD",
+                        percentFee: 10
+                    }
+            });
+            var log = new Log.ApplicationFee(charge);
+            expect(log.events[0]).toEqual("Application Fee: 10 USD (10 USD)");
+
+            var charge = new Charge.Direct({
+                    amount: 100,
+                    currency: "USD",
+                    customer: {
+                        country: "US",
+                    },
+                    account: {
+                        country: "GB",
+                        currency: "GBP"
+                    },
+                    platform: {
+                        country: "US",
+                        currency: "USD",
+                        percentFee: 10
+                    }
+            });
+            var log = new Log.ApplicationFee(charge);
+            expect(log.events[0]).toEqual("Application Fee: 10 USD (12.79 GBP)");
+        });
+    });
+
     describe("Settlement", function () {
         it("Defines the charge that was was settled with an array of one string for the event", function() {
             var charge = new Charge.Standard({
