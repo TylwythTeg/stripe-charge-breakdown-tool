@@ -40,13 +40,15 @@ function loadRates() {
 }
 loadRates();
 
-var Money = (function (){
+var Money = (function() {
 
-    function Money(amount, currency) {
+    function Money(amount, currency, roundingMethod) {
+        var roundingMethod = (roundingMethod || "round");
         this.currency = currency;
-        var rounding = zeroDecimalCurrencies.includes(currency) ? 0 : -2;
-        this.rounding = rounding;
-        this.amount = new Decimal(Math.round10(amount, rounding));
+        this.rounding = zeroDecimalCurrencies.includes(currency) ? 0 : -2;
+        this.amount = new Decimal(
+            Math[roundingMethod + "10"](amount, this.rounding)
+        );
     };
 
     Money.prototype.toString = function() {
@@ -65,7 +67,7 @@ var Money = (function (){
         return (this.currency === money.currency && this.amount.toNumber() === money.amount.toNumber());
     };
 
-   var zeroDecimalCurrencies = [
+    var zeroDecimalCurrencies = [
         "MGA",
         "BIF",
         "PYG",
@@ -85,22 +87,27 @@ var Money = (function (){
 
     /* Add basic Decimal.js support */
     (function buildMathMethods() {
-        var methods = ["plus", "minus", "times"];
+        var methods = ["plus", "minus", "times", "dividedBy"];
         for (var i = 0; i < methods.length; i++) {
             let method = methods[i];
-            Money.prototype[method] = function(money) {
+            Money.prototype[method] = function(money, roundingMethod) {
+                // "round", "floor", "ceil"
+                if (!roundingMethod) {
+                    var roundingMethod = "round";
+                }
+
                 if (money.hasOwnProperty("amount")) {
                     var amount = this.amount[method](money.amount);
-                    return new Money(amount, this.currency);
+                    return new Money(amount, this.currency, roundingMethod);
                 } else {
                     var amount = this.amount[method](money);
-                    return new Money(amount, this.currency);
+                    return new Money(amount, this.currency, roundingMethod);
                 }
             };
         }
     })();
 
-    
+
     return Money;
 
 })();
@@ -167,10 +174,9 @@ var Customer = (function() {
     return Customer;
 })();
 
+var Pricing = (function() {
 
-var Pricing = (function () {
-
-    function Pricing (pricing, currency){
+    function Pricing(pricing, currency) {
         var fees = pricing.split(" + ");
         this.currency = currency;
         this.percent = new Decimal(fees[0]);
@@ -179,12 +185,12 @@ var Pricing = (function () {
     }
 
     Pricing.prototype.toString = function() {
-        return this.percent.toString() + " + "
-            + this.fixed.toString(); 
+        return this.percent.toString() + " + " +
+            this.fixed.toString();
     };
 
-    /* Domestic/International/European/ Conversion pricing model for each country */
-    Pricing.Model = (function () {
+    /* Domestic/International pricing model for each country */
+    Pricing.Model = (function() {
 
         function PricingModel(country, pricing) {
             this.currency = pricing.currency;
@@ -223,13 +229,13 @@ var Pricing = (function () {
         ];
 
         var countries = {
-            "US": new PricingModel("US",{
+            "US": new PricingModel("US", {
                 domestic: "2.9 + 0.30",
                 international: "3.9 + 0.30",
                 fxPercent: 1,
                 currency: "USD"
             }),
-            "AU": new PricingModel("AU",{
+            "AU": new PricingModel("AU", {
                 domestic: "1.75 + 0.30",
                 international: "2.9 + 0.30",
                 fxPercent: 2,
@@ -405,7 +411,7 @@ var Account = (function() {
 
 var Platform = (function() {
 
-    function Platform (country, currency, feePercent) {
+    function Platform(country, currency, feePercent) {
         Account.call(this, country, currency);
         this.feePercent = new Decimal(feePercent);
         this.feeMultiplier = this.feePercent.times(0.01);
@@ -416,9 +422,6 @@ var Platform = (function() {
     return Platform;
 
 })();
-
-/* Do I want to add a TransactionalFee that contains a Stripe fee?  */
-/* Would that make the stripe fee adjustment in GST situations make more sense?  */
 
 var Fee = (function() {
 
@@ -445,87 +448,104 @@ var Fee = (function() {
 
     function VAT(stripeFeeSettlement, country) {
         var VAT_RATE = new Decimal(0.23);
-        if (country === "IE") {
-            return stripeFeeSettlement.times(VAT_RATE);
-        } else /* no Vat required */ {
-            return new Money(0, stripeFeeSettlement.currency);
-        }
+
+        return (country === "IE") ?
+            stripeFeeSettlement.times(VAT_RATE) :
+            new Money(0, stripeFeeSettlement.currency);
     }
 
-    /* Calcs a GST and Stripe portion for StripeFee w/ StripeFeeTotal to indicate if the total changed in process */
-    function GST(stripeFeeSettlement, accountCountry) {
-        var stripePortionMultiplier = new Decimal(10).dividedBy(11);
-        if (accountCountry === "AU") {
-            // handling money math and rounding ourselves...
-            var stripePortion = stripeFeeSettlement.amount.times(stripePortionMultiplier);
-            var roundedStripe = new Decimal(Math.round10(stripePortion, stripeFeeSettlement.rounding));
-            var flooredStripe = new Decimal(Math.floor10(stripePortion, stripeFeeSettlement.rounding));
-            var flooredTax = new Decimal(Math.floor10(flooredStripe.dividedBy(10), stripeFeeSettlement.rounding));
-            var roundedTax = new Decimal(Math.round10(roundedStripe.dividedBy(10), stripeFeeSettlement.rounding));
-            //console.log("Rounded Stripe: " + roundedStripe);
-            //console.log("Floored Stripe: " + flooredStripe);
-            //console.log("Rounded Tax: " + roundedTax);
-            //console.log("Floored Tax: " + flooredTax);
-            if (roundedTax.toString() === flooredTax.toString()) {
-                /* use rounded portions */
-                return {
-                    stripePortion: new Money(roundedStripe, stripeFeeSettlement.currency),
-                    GSTPortion: new Money(roundedTax, stripeFeeSettlement.currency),
-                    stripeFeeTotal: stripeFeeSettlement
-                };
-            } else {
-                /* Use floored portions */
-                var stripePortion = new Money(flooredStripe, stripeFeeSettlement.currency);
-                var GSTPortion = new Money(flooredTax, stripeFeeSettlement.currency);
-                /* if portions don't add up, something needs adjustment */
-                if ((stripePortion.plus(GSTPortion).amount < stripeFeeSettlement.amount)) {
-                    if (roundedStripe.toString() !== flooredStripe.toString()) {
-                        /* send back an amount indicating total stripe fee amount must change */
-                        stripeFeeSettlement = stripePortion.plus(GSTPortion);
-                    } else {
-                        /* use rounded Stripe portion but find the GST fee on remainder */
-                        GSTPortion = stripeFeeSettlement.minus(stripePortion);
-                    }
-                }
-                return {
-                    stripePortion: stripePortion,
-                    GSTPortion: GSTPortion,
-                    stripeFeeTotal: stripeFeeSettlement,
-                };
+    VAT.applicable = function(country) {
+        return (country === "IE");
+    };
+
+    var GST = (function() {
+
+        function GST(stripeFeeSettlement, accountCountry) {
+            if (!applicable(accountCountry)) {
+                return noGST(stripeFeeSettlement);
             }
-        } else /* No GST applicable */ {
+
+            var stripePortionMultiplier = new Decimal(10).dividedBy(11);
+            var flooredStripe = stripeFeeSettlement.times(stripePortionMultiplier, "floor");
+            var roundedStripe = stripeFeeSettlement.times(stripePortionMultiplier);
+            var roundedTax = roundedStripe.dividedBy(10);
+            var flooredTax = flooredStripe.dividedBy(10, "floor");
+
+            return roundedTax.equals(flooredTax) ?
+                roundedPortions(roundedStripe, roundedTax, stripeFeeSettlement) :
+                flooredPortions(flooredStripe, roundedStripe, flooredTax, stripeFeeSettlement);
+        }
+
+        GST.applicable = function(country) {
+            return (country === "AU");
+        };
+
+
+        function applicable(country) {
+            return (country === "AU");
+        }
+
+        function noGST(stripeFeeSettlement) {
             return {
                 stripePortion: stripeFeeSettlement,
-                GSTPortion: new Money(0, stripeFeeSettlement.currency)
+                GSTPortion: new Money(0, stripeFeeSettlement.currency),
+                stripeFeeTotal: stripeFeeSettlement
             };
         }
-    }
+
+        function roundedPortions(roundedStripe, roundedTax, stripeFeeSettlement) {
+            return {
+                stripePortion: roundedStripe,
+                GSTPortion: roundedTax,
+                stripeFeeTotal: stripeFeeSettlement
+            };
+        }
+
+        function flooredPortions(flooredStripe, roundedStripe, flooredTax, stripeFeeSettlement) {
+            if (roundedStripe.equals(flooredStripe)) {
+                /* Use floored Stripe portion and find the GST part on remainder */
+                /* (GSTPortion plus 1 cent) */
+                return {
+                    stripePortion: flooredStripe,
+                    GSTPortion: stripeFeeSettlement.minus(flooredStripe),
+                    stripeFeeTotal: stripeFeeSettlement
+                };
+            }
+
+            /* Otherwise use both floored portions and adjust the stripe fee total */
+            /* (stripeFeeTotal minus 1 cent) */
+            return {
+                stripePortion: flooredStripe,
+                GSTPortion: flooredTax,
+                stripeFeeTotal: flooredStripe.plus(flooredTax)
+            };
+        }
+
+        return GST;
+    })();
 
     function Application(platform, charge, type) {
+        this.conversionNecessary = (platform.currency !== charge.settlement.currency);
+
         /* what is specified at the time of charge creation */
         this.presentment = charge.presentment.times(platform.feeMultiplier);
 
         /* No fx fee here because we're just converting a value */
         this.settlement = this.presentment.convertTo(charge.settlement.currency);
 
-        /*  if destination, need to deduct stripe fee. If Direct, just set as settlement. */
         if (type === "Destination") {
-            this.afterStripeFee = this.settlement.minus(charge.stripeFee.final);
+            this.settlement.afterStripeFee = this.settlement.minus(charge.stripeFee.final);
+            this.final = this.settlement.afterStripeFee.convertTo(platform.currency);
         } else {
-            this.afterStripeFee = this.settlement;
+            this.final = this.settlement.convertTo(platform.currency);
         }
 
-        this.final = this.afterStripeFee.convertTo(platform.currency);
-
-        if (platform.currency !== charge.settlement.currency) {
-            this.fxFee = this.final.times(platform.pricingModel.fxMultiplier);
-            this.finalAfterFxFee = this.final.minus(this.fxFee);
-        } else {
-            this.fxFee = new Money(0, platform.currency);
-            this.finalAfterFxFee = this.final.minus(this.fxFee);
+        if (this.conversionNecessary) {
+            this.final.fxFee = this.final.times(platform.pricingModel.fxMultiplier);
+            this.final.afterFxFee = this.final.minus(this.final.fxFee);
         }
-
     }
+
 
     return {
         Stripe: StripeFee,
@@ -542,23 +562,31 @@ var Charge = (function() {
         return type !== "Standard";
     }
 
+    var Charge = function() {
+
+    };
+
+    Charge.prototype.connect = function(type) {
+        return this.type !== "Standard";
+    };
+
+
     function getPricing() {
         /* SCTs use pricing of connected account like normal */
         /* However, domestic vs.international logical choice depends on Platform */
         if (this.type === "SCT") {
-            if (this.platform.hasDomesticPricingFor(this.customer)) {
-                return this.account.pricingModel.domestic;
-            } else {
-                return this.account.pricingModel.international;
-            }
+            return this.platform.hasDomesticPricingFor(this.customer) ?
+                this.account.pricingModel.domestic :
+                this.account.pricingModel.international;
         } else {
-            console.log(this);
             return this.account.pricingFor(this.customer);
         }
     }
 
     function settleFunds() {
-        if (this.presentment.currency !== this.account.currency) {
+        var that = this;
+
+        if (currenciesAreDifferent()) {
             this.settlement = this.presentment.convertTo(this.account.currency);
             this.fxFee = this.settlement.times(this.account.pricingModel.fxMultiplier);
         } else {
@@ -566,11 +594,15 @@ var Charge = (function() {
             this.fxFee = new Money(0, this.settlement.currency);
         }
         this.final = this.settlement.minus(this.fxFee);
+        this.final.fxPercent = this.account.pricingModel.fxPercent;
         this.stripeFee = new Fee.Stripe(this.final, this.pricing, this.account.country);
+
+        function currenciesAreDifferent() {
+            return (that.presentment.currency !== that.account.currency);
+        }
     }
 
     function initializeCharge(options) {
-        console.log("sdfsdfsdfsdf");
         this.options = options;
         this.customer = new Customer(options.customer.country, options.customer.currency);
         this.account = new Account(options.account.country, options.account.currency);
@@ -581,136 +613,239 @@ var Charge = (function() {
         this.pricing = getPricing.call(this, options.type);
         this.presentment = new Money(options.amount, options.currency);
         this.settlement = this.presentment.convertTo(options.account.currency);
+
+        this.connect = function() {
+            return this.type !== "Standard";
+        };
     }
 
-    this.Direct = function(options) {
+    Charge.Direct = function(options) {
         this.type = "Direct";
+        this.processedOn = "Connected Account";
         initializeCharge.call(this, options);
         settleFunds.call(this);
 
         this.amountAfterStripeFee = this.final.minus(this.stripeFee.final);
-        this.platform.applicationFee = new Fee.Application(this.platform, this, this.type);
-        this.connectedPortion = this.amountAfterStripeFee.minus(this.platform.applicationFee.settlement);
+        this.applicationFee = new Fee.Application(this.platform, this, this.type);
+        this.connectedPortion = this.amountAfterStripeFee.minus(this.applicationFee.settlement);
     };
 
-    this.Destination = function(options) {
+    Charge.Destination = function(options) {
         this.type = "Destination";
+        this.processedOn = "Platform";
         initializeCharge.call(this, options);
         settleFunds.call(this);
 
-        this.platform.applicationFee = new Fee.Application(this.platform, this, this.type);
-        this.connectedPortion = this.final.minus(this.platform.applicationFee.settlement);
+        this.applicationFee = new Fee.Application(this.platform, this, this.type);
+
+        var final = this.final.afterFxFee || this.final;
+        this.connectedPortion = final.minus(this.applicationFee.settlement);
     };
 
-    this.SCT = function(options) {
+
+
+    Charge.SCT = function(options) {
         this.type = "SCT";
+        this.processedOn = "Platform";
         initializeCharge.call(this, options);
         settleFunds.call(this);
+        this.finalAfterStripeFee = this.final.minus(this.stripeFee.final);
         /* What happens left is up to user. Transfer() methods for some reason? */
     };
 
-    this.Standard = function(options) {
+    Charge.Standard = function(options) {
         this.type = "Standard";
+        this.processedOn = "Account";
         initializeCharge.call(this, options);
         settleFunds.call(this);
 
         this.finalAfterStripeFee = this.final.minus(this.stripeFee.final);
     };
 
-    return this;
+    return Charge;
 })();
 
-/* Logger + Browser reliant code */
+var Log = (function() {
 
-var logger = function(direct) {
-    /* charge method? */
-    var logString = "Charge:";
-    logString += "\n - Presentment: " + direct.presentment +
-        "\n - Settlement: " + direct.settlement +
-        "\n - Conversion Fee: " + direct.fxFee +
-        "\n - Final: " + direct.final +
-        "\n - Pricing: " + direct.pricing.percent + "% + " + direct.pricing.fixed +
-        "\n - Stripe Fee: " + direct.stripeFee.settlement + " (" +
-        direct.pricing.percent + "% + " + direct.stripeFee.settledFixedFee + " of " + direct.final + ")";
+    function Log() {
 
-    /* GST */
-    if (direct.account.country === "AU") {
-        logString += "\n - GST: " + direct.stripeFee.GSTPortion + " of the " + direct.stripeFee.settlement + " Stripe Fee is included as GST";
     }
 
-    /* GST */
-    if (direct.account.country === "IE") {
-        logString += "\n - VAT: " + direct.stripeFee.vat + " is added as VAT to Stripe Fee of " + direct.stripeFee.settlement + ", for a total fee of: " + direct.stripeFee.final;
-    }
+    Log.Account = function(account) {
+        this.type = "Account";
 
-    if (direct.type !== "Standard") {
-        logString += "\n\nPlatform:" +
-            "\n - Country: " + direct.platform.country +
-            "\n - Default Currency: " + direct.platform.currency;
-            if (direct.type !== "SCT") {
-            logString += "\n - Platform Fee: " + direct.platform.applicationFee.presentment + " (" +
-            direct.platform.applicationFee.settlement + ")";
-    }
-    }
-        var constrg = direct.type === "Standard" ? "Account" : "Connected Account"
-    logString += "\n\n" + constrg +":" +
-        "\n - Country: " + direct.account.country +
-        "\n - Default Currency: " + direct.account.currency;
+        this.events = [
+            "Account:",
+            "- Country: " + account.country,
+            "- Currency: " + account.currency,
+        ];
 
-    logString += "\n\nCustomer:" +
-        "\n - Country: " + direct.customer.country;
-
-    logString += "\n\nSettle The Charge:" +
-        "\n1. " + direct.presentment + " Charge created on Connected Account";
-    if (direct.presentment.currency !== direct.settlement.currency) {
-        logString += "\n1a. " + direct.presentment + " converted to " + direct.settlement +
-            "\n1b. After " + direct.account.pricingModel.fxPercent + "% conversion fee, " + direct.final + " left over";
-    }
-
-
-    if (direct.type === "Direct") {
-        logString += "\n\nSplit Funds (Direct Charge):" +
-            "\n1. Stripe Fee of " + direct.stripeFee.final + " is taken, leaving " + direct.amountAfterStripeFee +
-            "\n2. Application Fee of " + direct.platform.applicationFee.settlement + " is sent to platform, leaving " + direct.connectedPortion + " for Connected Account";
-
-        if (direct.settlement.currency !== direct.platform.currency) {
-            logString += "\n2a. " + direct.platform.applicationFee.settlement + " converted to " + direct.platform.applicationFee.final +
-                "\n2b. After " + direct.platform.pricingModel.fxPercent + "% conversion fee, " + direct.platform.applicationFee.finalAfterFxFee + " left for Platform";
-        }
-    } /* destination */
-    else if (direct.type === "Destination") {
-        logString += "\n\nSplit Finds (Destination Charge):" +
-            "\n1. " + direct.connectedPortion + " is sent to Connected Account, leaving " + direct.platform.applicationFee.settlement + " for Platform" +
-            "\n2. Stripe Fee of " + direct.stripeFee.final + " is taken from Platform, leaving " + direct.platform.applicationFee.afterStripeFee + " for Platform";
-
-        if (direct.settlement.currency !== direct.platform.currency) {
-            logString += "\n2a. " + direct.platform.applicationFee.afterStripeFee + " converted to " + direct.platform.applicationFee.final +
-                "\n2b. After " + direct.platform.pricingModel.fxPercent + "% conversion fee, " + direct.platform.applicationFee.finalAfterFxFee + " left for Platform";
-        }
-    } else if (direct.type === "Destination") {
-        logString += "\n\nSplit Finds (Destination Charge):" +
-            "\n1. " + direct.connectedPortion + " is sent to Connected Account, leaving " + direct.platform.applicationFee.settlement + " for Platform" +
-            "\n2. Stripe Fee of " + direct.stripeFee.final + " is taken from Platform, leaving " + direct.platform.applicationFee.afterStripeFee + " for Platform";
-
-        if (direct.settlement.currency !== direct.platform.currency) {
-            logString += "\n2a. " + direct.platform.applicationFee.afterStripeFee + " converted to " + direct.platform.applicationFee.final +
-                "\n2b. After " + direct.platform.pricingModel.fxPercent + "% conversion fee, " + direct.platform.applicationFee.finalAfterFxFee + " left for Platform";
-        }
-    } else if (direct.type === "Standard") {
-        logString += "\n\nStandard Charge:" +
-            "\n1. Stripe Fee of " + direct.stripeFee.final + " is taken, leaving " + direct.final.minus(direct.stripeFee.final);
-    } else /* SCT */ {
-        logString += "\n\nSCT Charge:" +
-            "\n1. Stripe Fee of " + direct.stripeFee.final + " is taken, leaving " + direct.final.minus(direct.stripeFee.final);
-    }
-
-
-    this.toString = function() {
-        return logString;
     };
 
+    Log.Platform = function(platform) {
+        this.type = "Platform";
 
-};
+        this.events = [
+            "Platform:",
+            "- Country: " + platform.country,
+            "- Currency: " + platform.currency,
+        ];
+
+    };
+
+    Log.Customer = function(customer) {
+        this.type = "Customer";
+
+        this.events = [
+            "Customer:",
+            "- Country: " + customer.country,
+        ];
+
+    };
+
+    Log.Pricing = function(charge) {
+        this.type = "Pricing";
+
+        this.events = [
+            "Pricing: " + charge.pricing.percent + "% + " + charge.pricing.fixed,
+        ];
+
+    };
+
+    Log.StripeFee = function(charge) {
+        this.type = "StripeFee";
+
+        /* This is to account for the weirdnness in how gst vs vat affects stripe fee */
+        var transactionFee = Fee.VAT.applicable(charge.account.country) ?
+            charge.stripeFee.settlement :
+            charge.stripeFee.final;
+
+        this.events = [
+            "Stripe Fee: " + transactionFee + " (" +
+            charge.pricing.percent + "% + " + charge.stripeFee.settledFixedFee + " of " +
+            charge.final + ")",
+        ];
+
+        if (Fee.GST.applicable(charge.account.country)) {
+            this.events.push("GST: " + charge.stripeFee.GSTPortion + " of the " + charge.stripeFee.final + " Stripe Fee is included as GST");
+        }
+
+        if (Fee.VAT.applicable(charge.account.country)) {
+            this.events.push("VAT: " + charge.stripeFee.vat + " is added as VAT to Stripe Fee of " + charge.stripeFee.settlement + ", for a total fee of " + charge.stripeFee.final);
+        }
+
+    };
+
+    Log.ApplicationFee = function(charge) {
+        this.type = "ApplicationFee";
+
+        this.events = [
+            "Application Fee: " + charge.applicationFee.presentment + " (" +
+            charge.applicationFee.settlement + ")",
+        ];
+
+    };
+
+    Log.Settlement = function(charge) {
+        this.type = "Settlement";
+        this.events = ["1. " + charge.presentment + " charge created on " + charge.processedOn];
+        if (!charge.presentment.equals(charge.settlement)) {
+            this.events.push("2. " + charge.presentment + " converted to " + charge.settlement);
+            this.events.push("2a. After " + charge.final.fxPercent + "% conversion fee, " +
+                charge.final + " is left");
+        }
+    };
+
+    Log.flow = {};
+
+    Log.flow.Standard = function(charge) {
+        this.type = "Flow";
+        this.events = [
+            "1. Stripe Fee of " + charge.stripeFee.final +
+            " is taken, leaving " + charge.finalAfterStripeFee,
+        ];
+    };
+
+    Log.flow.Direct = function(charge) {
+        this.type = "Flow";
+        this.events = [
+            "1. Stripe Fee of " + charge.stripeFee.final +
+            " is taken, leaving " + charge.amountAfterStripeFee,
+            "2. Application Fee of " + charge.applicationFee.settlement +
+            " is sent to Platform, leaving " + charge.connectedPortion + " for Connected Account",
+        ];
+
+        if (charge.applicationFee.conversionNecessary) {
+            this.events.push("3. " + charge.applicationFee.settlement + " is converted to " +
+                charge.applicationFee.final);
+            this.events.push("3a. After " + charge.platform.pricingModel.fxPercent + "% conversion fee, " +
+                charge.applicationFee.final.afterFxFee + " is left for Platform");
+        }
+    };
+
+    Log.flow.Destination = function(charge) {
+        this.type = "Flow";
+
+        this.events = [
+            "1. " + charge.connectedPortion + " is sent to Connected Account, leaving " +
+            charge.applicationFee.settlement + " for Platform",
+            "2. Stripe Fee of " + charge.stripeFee.final +
+            " is taken from Platform, leaving " +
+            charge.applicationFee.settlement.afterStripeFee +
+            " for Platform",
+        ];
+
+        if (charge.applicationFee.conversionNecessary) {
+            this.events.push("3. " + charge.applicationFee.settlement.afterStripeFee + " is converted to " +
+                charge.applicationFee.final);
+            this.events.push("3a. After " + charge.platform.pricingModel.fxPercent + "% conversion fee, " +
+                charge.applicationFee.final.afterFxFee + " is left for Platform");
+        }
+
+    };
+
+    Log.flow.SCT = function(charge) {
+        return Log.flow.Standard(charge);
+    };
+
+    Log.Charge = function(charge) {
+        this.events = [];
+
+        if (charge.connect()) {
+            this.platform = new Log.Platform(charge.platform);
+            this.events.push(this.platform.events.join("\n") + "\n");
+        }
+
+        this.account = new Log.Account(charge.account);
+        this.events.push(this.account.events.join("\n") + "\n");
+
+        this.customer = new Log.Customer(charge.customer);
+        this.events.push(this.customer.events.join("\n") + "\n");
+
+        this.pricing = new Log.Pricing(charge);
+        this.events.push(this.pricing.events);
+
+        this.stripeFee = new Log.StripeFee(charge);
+        this.events.push(this.stripeFee.events.join("\n"));
+
+        if (charge.connect() && charge.type !== "SCT") {
+            this.applicationFee = new Log.ApplicationFee(charge);
+            this.events.push(this.applicationFee.events);
+        }
+
+        this.settlement = new Log.Settlement(charge);
+        this.events.push("\n" + this.settlement.events.join("\n") + "\n");
+
+        this.paymentFlow = (charge.type === "SCT") ? new Log.flow.Standard(charge) :
+            new Log.flow[charge.type](charge);
+
+        this.events.push(this.paymentFlow.events.join("\n"));
+
+        this.output = this.events.join("\n");
+    };
+
+    return Log;
+})();
 
 function getInputElements() {
     return {
@@ -778,7 +913,6 @@ window.onload = function() {
 
 
         var flow = getChargeType();
-        console.log(flow);
         var myCharge = new Charge[flow]({
             amount: g,
             currency: h,
@@ -796,17 +930,14 @@ window.onload = function() {
             }
         });
 
-        console.log(myCharge);
-
-        log = new logger(myCharge);
-
+        var log = new Log.Charge(myCharge);
         return log;
     }
 
     // Calculate button callback
     elements.calculateButton.addEventListener('click', function() {
-        var y = new chargeFromInput();
-        elements.outcome.value = y;
+        var log = new chargeFromInput();
+        elements.outcome.value = log.output;
         elements.outcome.style.display = "block";
     });
 
