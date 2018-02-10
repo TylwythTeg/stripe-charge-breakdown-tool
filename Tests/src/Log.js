@@ -144,6 +144,8 @@ var Log = (function() {
     Log.Charge = function(charge) {
         this.events = [];
 
+        this.events.push(charge.type + " Charge:\n");
+
         if (charge.connect()) {
             this.platform = new Log.Platform(charge.platform);
             this.events.push(this.platform.events.join("\n") + "\n");
