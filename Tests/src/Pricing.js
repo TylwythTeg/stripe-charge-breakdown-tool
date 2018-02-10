@@ -1,7 +1,6 @@
+var Pricing = (function() {
 
-var Pricing = (function () {
-
-    function Pricing (pricing, currency){
+    function Pricing(pricing, currency) {
         var fees = pricing.split(" + ");
         this.currency = currency;
         this.percent = new Decimal(fees[0]);
@@ -10,12 +9,12 @@ var Pricing = (function () {
     }
 
     Pricing.prototype.toString = function() {
-        return this.percent.toString() + " + "
-            + this.fixed.toString(); 
+        return this.percent.toString() + " + " +
+            this.fixed.toString();
     };
 
     /* Domestic/International pricing model for each country */
-    Pricing.Model = (function () {
+    Pricing.Model = (function() {
 
         function PricingModel(country, pricing) {
             this.currency = pricing.currency;
@@ -54,13 +53,13 @@ var Pricing = (function () {
         ];
 
         var countries = {
-            "US": new PricingModel("US",{
+            "US": new PricingModel("US", {
                 domestic: "2.9 + 0.30",
                 international: "3.9 + 0.30",
                 fxPercent: 1,
                 currency: "USD"
             }),
-            "AU": new PricingModel("AU",{
+            "AU": new PricingModel("AU", {
                 domestic: "1.75 + 0.30",
                 international: "2.9 + 0.30",
                 fxPercent: 2,
@@ -212,8 +211,3 @@ var Pricing = (function () {
 
     return Pricing;
 })();
-
-
-
-
-

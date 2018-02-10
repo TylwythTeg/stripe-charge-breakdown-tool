@@ -1,6 +1,5 @@
 /* Do I want to add a TransactionalFee that contains a Stripe fee?  */
 /* Would that make the stripe fee adjustment in GST situations make more sense?  */
-
 var Fee = (function() {
 
     function StripeFee(finalChargeAmount, pricing, accountCountry) {
@@ -29,14 +28,14 @@ var Fee = (function() {
 
         return (country === "IE") ?
             stripeFeeSettlement.times(VAT_RATE) :
-            new Money(0,stripeFeeSettlement.currency);
+            new Money(0, stripeFeeSettlement.currency);
     }
 
     VAT.applicable = function(country) {
         return (country === "IE");
     };
 
-    var GST = (function () {
+    var GST = (function() {
 
         function GST(stripeFeeSettlement, accountCountry) {
             if (!applicable(accountCountry)) {
@@ -84,18 +83,18 @@ var Fee = (function() {
                 /* Use floored Stripe portion and find the GST part on remainder */
                 /* (GSTPortion plus 1 cent) */
                 return {
-                 stripePortion: flooredStripe,
-                 GSTPortion: stripeFeeSettlement.minus(flooredStripe),
-                 stripeFeeTotal: stripeFeeSettlement
+                    stripePortion: flooredStripe,
+                    GSTPortion: stripeFeeSettlement.minus(flooredStripe),
+                    stripeFeeTotal: stripeFeeSettlement
                 };
             }
 
             /* Otherwise use both floored portions and adjust the stripe fee total */
             /* (stripeFeeTotal minus 1 cent) */
             return {
-                    stripePortion: flooredStripe,
-                    GSTPortion: flooredTax,
-                    stripeFeeTotal: flooredStripe.plus(flooredTax)
+                stripePortion: flooredStripe,
+                GSTPortion: flooredTax,
+                stripeFeeTotal: flooredStripe.plus(flooredTax)
             };
         }
 
@@ -116,7 +115,7 @@ var Fee = (function() {
             this.final = this.settlement.afterStripeFee.convertTo(platform.currency);
         } else {
             this.final = this.settlement.convertTo(platform.currency);
-        } 
+        }
 
         if (this.conversionNecessary) {
             this.final.fxFee = this.final.times(platform.pricingModel.fxMultiplier);

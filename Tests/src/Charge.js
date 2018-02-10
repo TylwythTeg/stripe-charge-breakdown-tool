@@ -4,7 +4,7 @@ var Charge = (function() {
         return type !== "Standard";
     }
 
-    var Charge = function () {
+    var Charge = function() {
 
     };
 
@@ -49,7 +49,7 @@ var Charge = (function() {
         }
         */
 
-        
+
         function currenciesAreDifferent() {
             return (that.presentment.currency !== that.account.currency);
         }
@@ -67,7 +67,7 @@ var Charge = (function() {
         this.presentment = new Money(options.amount, options.currency);
         this.settlement = this.presentment.convertTo(options.account.currency);
 
-        this.connect = function () {
+        this.connect = function() {
             return this.type !== "Standard";
         };
     }
@@ -95,7 +95,7 @@ var Charge = (function() {
         this.connectedPortion = final.minus(this.applicationFee.settlement);
     };
 
-    
+
 
     Charge.SCT = function(options) {
         this.type = "SCT";

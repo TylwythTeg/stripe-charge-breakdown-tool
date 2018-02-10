@@ -381,7 +381,7 @@ describe ("Log", function () {
                     }
             });
     var log = new Log.Charge(charge);
-    console.log(log);
+    //console.log(log);
 
     var charge = new Charge.Destination({
                     amount: 100,
@@ -400,7 +400,7 @@ describe ("Log", function () {
                     }
             });
     var log = new Log.Charge(charge);
-    console.log(log);
+    //console.log(log);
 
     var charge = new Charge.Destination({
                     amount: 100,
@@ -419,7 +419,7 @@ describe ("Log", function () {
                     }
             });
     var log = new Log.Charge(charge);
-    console.log(log);
+    //console.log(log);
 
      var charge = new Charge.Standard({
                     amount: 100,
@@ -433,7 +433,7 @@ describe ("Log", function () {
                     },
             });
     var log = new Log.Charge(charge);
-    console.log(log);
+    //console.log(log);
 
 
 
@@ -455,7 +455,7 @@ describe ("Log", function () {
                     }
             });
     var log = new Log.Charge(charge);
-    console.log(log);
+    //console.log(log);
 
     var charge = new Charge.Direct({
                     amount: 100,
@@ -474,7 +474,7 @@ describe ("Log", function () {
                     }
             });
     var log = new Log.Charge(charge);
-    console.log(log);
+    //console.log(log);
 
     var charge = new Charge.Direct({
                     amount: 100,
@@ -493,7 +493,7 @@ describe ("Log", function () {
                     }
             });
     var log = new Log.Charge(charge);
-    console.log(log);
+    //console.log(log);
     
         /* Staging something */
     var charge = new Charge.SCT({
@@ -513,7 +513,7 @@ describe ("Log", function () {
                     }
             });
     var log = new Log.Charge(charge);
-    console.log(log);
+    //console.log(log);
 
     var charge = new Charge.SCT({
                     amount: 100,
@@ -532,7 +532,7 @@ describe ("Log", function () {
                     }
             });
     var log = new Log.Charge(charge);
-    console.log(log);
+    //console.log(log);
 
     var charge = new Charge.SCT({
                     amount: 100,
@@ -551,7 +551,7 @@ describe ("Log", function () {
                     }
             });
     var log = new Log.Charge(charge);
-    console.log(log);
+    //console.log(log);
 
     var charge = new Charge.Standard({
                     amount: 100,
@@ -565,7 +565,7 @@ describe ("Log", function () {
                     },
             });
     var log = new Log.Charge(charge);
-    console.log(log);
+    //console.log(log);
 
     var charge = new Charge.Standard({
                     amount: 100,
@@ -579,7 +579,7 @@ describe ("Log", function () {
                     },
             });
     var log = new Log.Charge(charge);
-    console.log(log);
+    //console.log(log);
 
     var charge = new Charge.Standard({
                     amount: 100,
@@ -593,7 +593,7 @@ describe ("Log", function () {
                     },
             });
     var log = new Log.Charge(charge);
-    console.log(log);
+    //console.log(log);
 
     //etc
 

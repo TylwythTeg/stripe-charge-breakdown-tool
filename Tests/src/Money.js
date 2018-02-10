@@ -9,26 +9,24 @@ function decimalAdjust(t,e,i){return void 0===i||0==+i?Math[t](e):(e=+e,i=+i,isN
 
 /* -------------------------------------------------------------------------- */
 
-/* Add to Decimal? */
-
-
 
 /* In place of Money.js dependency */
-fx = (function () {
-    var testConversionRate = function () { return 1.278789; };
+fx = (function() {
+    var testConversionRate = function() {
+        return 1.278789;
+    };
     return {
-        convert: function (amount, options) {
+        convert: function(amount, options) {
             var from = options.from;
             var to = options.to;
             return (from === to) ? amount : amount.times(testConversionRate());
-        }  
+        }
     };
 })();
 /* In place of Money.js dependency */
 
 
-
-var Money = (function (){
+var Money = (function() {
 
     function Money(amount, currency, roundingMethod) {
         var roundingMethod = (roundingMethod || "round");
@@ -55,7 +53,7 @@ var Money = (function (){
         return (this.currency === money.currency && this.amount.toNumber() === money.amount.toNumber());
     };
 
-   var zeroDecimalCurrencies = [
+    var zeroDecimalCurrencies = [
         "MGA",
         "BIF",
         "PYG",
@@ -95,7 +93,7 @@ var Money = (function (){
         }
     })();
 
-    
+
     return Money;
 
 })();
