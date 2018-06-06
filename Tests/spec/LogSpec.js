@@ -37,7 +37,7 @@ describe ("Log", function () {
             });
             var log = new Log.Pricing(charge);
             expect(log.events[0]).toEqual("Pricing: 2.9% + 0.3 USD");
-        });    
+        });
     });
 
     describe("Stripe Fee", function () {
@@ -108,7 +108,7 @@ describe ("Log", function () {
             var log = new Log.StripeFee(charge);
             expect(log.events[1]).toEqual("VAT: 0.38 EUR is added as VAT to Stripe Fee of " +
                 "1.65 EUR, for a total fee of 2.03 EUR");
-        });      
+        });
     });
 
     describe("Application Fee", function() {
@@ -172,7 +172,7 @@ describe ("Log", function () {
 
         });
 
-        it("If conversion was necessary, adds two events to describe conversion and the conversion fee taken", function() { 
+        it("If conversion was necessary, adds two events to describe conversion and the conversion fee taken", function() {
             var charge = new Charge.Standard({
                     amount: 100,
                     currency: "USD",
@@ -291,7 +291,7 @@ describe ("Log", function () {
             expect(log.events[3]).toEqual("3a. After 2% conversion fee, 12.53 EUR is left for Platform");
         });
     });
-    
+
     describe("Destination Flow", function() {
         it("The Connected Account receives its portion of the funds", function(){
             var charge = new Charge.Destination({
@@ -362,7 +362,7 @@ describe ("Log", function () {
 
     });
 
-    
+
 /* Staging something */
     var charge = new Charge.Destination({
                     amount: 100,
@@ -494,7 +494,7 @@ describe ("Log", function () {
             });
     var log = new Log.Charge(charge);
     //console.log(log);
-    
+
         /* Staging something */
     var charge = new Charge.SCT({
                     amount: 100,
@@ -597,4 +597,130 @@ describe ("Log", function () {
 
     //etc
 
-}); 
+
+    it("Generates an error if the charge did not meet the minimum amount", function () {
+        var charge = new Charge.Standard({
+                amount: 0.4,
+                currency: "USD",
+                customer: {
+                    country: "US",
+                },
+                account: {
+                    country: "US",
+                    currency: "USD"
+                }
+
+        });
+        var log = new Log.Charge(charge);
+        expect(log.hasError).toEqual(true);
+        expect(log.error).toEqual("Error: 0.4 USD is less than the minimum (0.5 USD)");
+
+        var charge = new Charge.Standard({
+                amount: 0.6,
+                currency: "USD",
+                customer: {
+                    country: "US",
+                },
+                account: {
+                    country: "US",
+                    currency: "USD"
+                }
+        });
+        var log = new Log.Charge(charge);
+        expect(log.hasError).toEqual(undefined); //why isn't that false!
+        //
+        var charge = new Charge.Standard({
+                amount: 0.2,
+                currency: "GBP",
+                customer: {
+                    country: "US",
+                },
+                account: {
+                    country: "GB",
+                    currency: "GBP"
+                }
+
+        });
+        var log = new Log.Charge(charge);
+        expect(log.hasError).toEqual(true);
+        expect(log.error).toEqual("Error: 0.2 GBP is less than the minimum (0.3 GBP)");
+
+        var charge = new Charge.Standard({
+                amount: 0.2,
+                currency: "GBP",
+                customer: {
+                    country: "US",
+                },
+                account: {
+                    country: "US",
+                    currency: "USD"
+                }
+
+        });
+        var log = new Log.Charge(charge);
+        expect(log.hasError).toEqual(true);
+        expect(log.error).toEqual("Error: 0.26 USD (converted from 0.2 GBP) is less than the minimum (0.5 USD)");
+    });
+
+    it("Generates an error if the application Fee is <0% or >100%", function () {
+        var charge = new Charge.Direct({
+                    amount: 100,
+                    currency: "USD",
+                    customer: {
+                        country: "US",
+                    },
+                    account: {
+                        country: "US",
+                        currency: "USD"
+                    },
+                    platform: {
+                        country: "US",
+                        currency: "USD",
+                        percentFee: 0
+                    }
+            });
+        var log = new Log.Charge(charge);
+        expect(log.hasError).toEqual(undefined);
+
+        var charge = new Charge.Direct({
+                    amount: 100,
+                    currency: "USD",
+                    customer: {
+                        country: "US",
+                    },
+                    account: {
+                        country: "US",
+                        currency: "USD"
+                    },
+                    platform: {
+                        country: "US",
+                        currency: "USD",
+                        percentFee: -1
+                    }
+            });
+        var log = new Log.Charge(charge);
+        expect(log.hasError).toEqual(true);
+        expect(log.error).toEqual("Error: App fee (-1%) cannot be below 0% or higher than 100%");
+
+        var charge = new Charge.Direct({
+                    amount: 100,
+                    currency: "USD",
+                    customer: {
+                        country: "US",
+                    },
+                    account: {
+                        country: "US",
+                        currency: "USD"
+                    },
+                    platform: {
+                        country: "US",
+                        currency: "USD",
+                        percentFee: 200
+                    }
+            });
+        var log = new Log.Charge(charge);
+        expect(log.hasError).toEqual(true);
+        expect(log.error).toEqual("Error: App fee (200%) cannot be below 0% or higher than 100%");
+    });
+
+});

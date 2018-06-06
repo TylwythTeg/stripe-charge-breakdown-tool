@@ -111,11 +111,22 @@ var Fee = (function() {
         this.settlement = this.presentment.convertTo(charge.settlement.currency);
 
         if (type === "Destination") {
+            // Since there's no 100% app fee on Destination charges, need to ensure connected account gets at least
+            // the smallest currency unit from the final charge amount
+            if (charge.final.minus(this.settlement).amount <= 0) {
+                this.settlement = charge.final.minus(Money.smallestCurrencyUnit(this.settlement.currency));
+            }
             this.settlement.afterStripeFee = this.settlement.minus(charge.stripeFee.final);
             this.final = this.settlement.afterStripeFee.convertTo(platform.currency);
         } else {
+            // if the specified percentage is greater than what's left after the stripe fee is taken
+            // just give them what's left
+            if (charge.amountAfterStripeFee.amount.comparedTo(this.settlement.amount) == -1) {
+                this.settlement = charge.amountAfterStripeFee;
+            }
             this.final = this.settlement.convertTo(platform.currency);
         }
+
 
         if (this.conversionNecessary) {
             this.final.fxFee = this.final.times(platform.pricingModel.fxMultiplier);

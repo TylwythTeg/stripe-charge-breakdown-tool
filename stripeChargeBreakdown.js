@@ -33,7 +33,6 @@ function loadRates() {
         }
     };
     request.onerror = function() {
-        // There was a connection error of some sort
         alert("Error loading conversion rates");
     };
     request.send();
@@ -67,6 +66,36 @@ var Money = (function() {
         return (this.currency === money.currency && this.amount.toNumber() === money.amount.toNumber());
     };
 
+    var minimumAmounts = {
+        "USD": 0.5,
+        "AUD": 0.5,
+        "BRL": 0.5,
+        "CAD": 0.5,
+        "CHF": 0.5,
+        "DKK": 2.5,
+        "EUR": 0.5,
+        "GBP": 0.3,
+        "HKD": 4,
+        "JPY": 50,
+        "MXN": 10,
+        "NOK": 3,
+        "NZD": 0.5,
+        "SEK": 3,
+        "SGD": 0.5,
+    };
+
+    Money.getMinimumAmount = function(currency) {
+        return minimumAmounts[currency] || "No record of minimum amount for currency found";
+    };
+
+    function meetsMinimumAmount(currency, amount, settlementCurrency) {
+        settlementCurrency = settlementCurrency || currency;
+        var settledAmount = new Money(amount,currency).convertTo(settlementCurrency).amount;
+        var minAmount = new Decimal(minimumAmounts[settlementCurrency]);
+        return ((settledAmount.comparedTo(minAmount) == 1) || (settledAmount.comparedTo(minAmount) == 0));
+    }
+    Money.meetsMinimumAmount = meetsMinimumAmount;
+
     var zeroDecimalCurrencies = [
         "MGA",
         "BIF",
@@ -84,6 +113,12 @@ var Money = (function() {
         "KRW",
         "KMF",
     ];
+
+    Money.smallestCurrencyUnit = function(currency) {
+        return zeroDecimalCurrencies.includes(currency) ?
+            new Money(1, currency) :
+            new Money(0.01, currency);
+    };
 
     /* Add basic Decimal.js support */
     (function buildMathMethods() {
@@ -534,11 +569,22 @@ var Fee = (function() {
         this.settlement = this.presentment.convertTo(charge.settlement.currency);
 
         if (type === "Destination") {
+            // Since there's no 100% app fee on Destination charges, need to ensure connected account gets at least
+            // the smallest currency unit from the final charge amount
+            if (charge.final.minus(this.settlement).amount <= 0) {
+                this.settlement = charge.final.minus(Money.smallestCurrencyUnit(this.settlement.currency));
+            }
             this.settlement.afterStripeFee = this.settlement.minus(charge.stripeFee.final);
             this.final = this.settlement.afterStripeFee.convertTo(platform.currency);
         } else {
+            // if the specified percentage is greater than what's left after the stripe fee is taken
+            // just give them what's left
+            if (charge.amountAfterStripeFee.amount.comparedTo(this.settlement.amount) == -1) {
+                this.settlement = charge.amountAfterStripeFee;
+            }
             this.final = this.settlement.convertTo(platform.currency);
         }
+
 
         if (this.conversionNecessary) {
             this.final.fxFee = this.final.times(platform.pricingModel.fxMultiplier);
@@ -597,6 +643,9 @@ var Charge = (function() {
         this.final.fxPercent = this.account.pricingModel.fxPercent;
         this.stripeFee = new Fee.Stripe(this.final, this.pricing, this.account.country);
 
+        this.meetsMinimumAmount = Money.meetsMinimumAmount(this.settlement.currency,
+            this.settlement.amount);
+
         function currenciesAreDifferent() {
             return (that.presentment.currency !== that.account.currency);
         }
@@ -639,7 +688,9 @@ var Charge = (function() {
         this.applicationFee = new Fee.Application(this.platform, this, this.type);
 
         var final = this.final.afterFxFee || this.final;
+        //console.log("final: " + final);
         this.connectedPortion = final.minus(this.applicationFee.settlement);
+        //console.log("this.connectedPortion" + this.connectedPortion);
     };
 
 
@@ -844,6 +895,33 @@ var Log = (function() {
         this.events.push(this.paymentFlow.events.join("\n"));
 
         this.output = this.events.join("\n");
+
+        // scrap everything we just did and generate the error message
+        if (!charge.meetsMinimumAmount) {
+            this.error = Log.Error(charge);
+            this.hasError = true;
+        } else if (charge.connect() && (charge.platform.feeMultiplier > 1 || charge.platform.feeMultiplier < 0)) {
+            this.error = Log.Error_appFee_bounds(charge);
+            this.hasError = true;
+        }
+    };
+
+    // Specifically for a charge that doesn't meet the minimum charge amount
+    Log.Error = function(charge) {
+        error = "Error: " + charge.settlement + " ";
+        if(charge.settlement.currency !== charge.presentment.currency) {
+            error += "(converted from " + charge.presentment + ") ";
+        }
+        error += "is less than the minimum (" + Money.getMinimumAmount(charge.settlement.currency);
+        error += " " + charge.settlement.currency + ")";
+        return error;
+    };
+
+    //appfee can't be < 0% or > 100%
+    Log.Error_appFee_bounds = function(charge) {
+        error = "Error: App fee (" + charge.platform.feePercent + "%) ";
+        error += "cannot be below 0% or higher than 100%"
+        return error;
     };
 
     return Log;
@@ -861,7 +939,7 @@ function getInputElements() {
         chargeCurrency: document.getElementById("charge-currency"),
         calculateButton: document.getElementById("calculateButton"),
         directButton: document.getElementById("direct_button"),
-        outcome: document.getElementById("outcome"),
+        //outcome: document.getElementById("outcome"),
     };
 }
 
@@ -873,6 +951,9 @@ window.onload = function() {
     var platformElement = getPlatformElement();
     var radioFormElement = getChargeRadioForm();
     var radios = document.getElementsByName("flow");
+    var outcomeOverlay = document.getElementById("outcome_overlay");
+    var outcomeInner = document.getElementById("outcome_inner");
+    var overlayXButton = document.getElementById("overlay_x_button");
 
     function getPlatformElement() {
         return document.getElementsByClassName("platform-form")[0];
@@ -895,10 +976,16 @@ window.onload = function() {
         if (event.target.type === "radio") {
             if (event.target.value === "Standard") {
                 platformElement.classList.remove("visible");
+                outcomeOverlay.classList.remove("connect_sized");
             } else {
                 platformElement.classList.add("visible");
+                outcomeOverlay.classList.add("connect_sized");
             }
         }
+    });
+
+    overlayXButton.addEventListener("click", function(event) {
+        outcomeOverlay.classList.remove("visible");
     });
 
 
@@ -933,14 +1020,20 @@ window.onload = function() {
         });
 
         var log = new Log.Charge(myCharge);
+        log.charge = myCharge;
         return log;
     }
 
     // Calculate button callback
     elements.calculateButton.addEventListener('click', function() {
         var log = new chargeFromInput();
-        elements.outcome.value = log.output;
-        elements.outcome.style.display = "block";
+        if (!log.hasError) {
+            outcomeInner.textContent = log.output;
+            outcomeOverlay.classList.add("visible");
+        } else {
+            outcomeInner.textContent = log.error;
+            outcomeOverlay.classList.add("visible");
+        }
     });
 
 };

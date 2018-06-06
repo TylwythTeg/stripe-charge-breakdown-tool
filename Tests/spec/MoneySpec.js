@@ -1,5 +1,3 @@
-
-
 describe ("Money", function () {
 
   it("Converts itself to another currency, based on a given rate", function () {
@@ -38,6 +36,23 @@ describe ("Money", function () {
     var money = new Money(22.31, "USD");
     var other = new Money(22.31, "EUR");
     expect(money.equals(other)).toEqual(false);
+  });
+
+  it("Finds the minimum charge amount for each supported settlement currency", function () {
+    expect(Money.getMinimumAmount("USD")).toEqual(0.5);
+    expect(Money.getMinimumAmount("DKK")).toEqual(2.5);
+    expect(Money.getMinimumAmount("ZZZ")).toEqual("No record of minimum amount for currency found");
+  });
+
+  it("Lets you know if the minimum amount is met for base or converted currency", function () {
+    expect(Money.meetsMinimumAmount("USD", 100)).toEqual(true);
+    expect(Money.meetsMinimumAmount("USD", 0.1)).toEqual(false);
+    expect(Money.meetsMinimumAmount("EGP", 0.1, "USD")).toEqual(false);
+  });
+
+  it("Gives you the smallest currency unit for a currency", function () {
+    expect(Money.smallestCurrencyUnit("USD")).toEqual(new Money(0.01, "USD"));
+    expect(Money.smallestCurrencyUnit("JPY")).toEqual(new Money(1, "JPY"));
   });
 
 });

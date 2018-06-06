@@ -1,16 +1,16 @@
-<div class = "title">
+<body><div class="title">
 <h3>Stripe Payment Flow Tool</h3>
 </div>
 
 
 <!-- Payment flow radio buttons -->
 <!-- Payment flow radio buttons -->
-<form class= "charge-form group-options">
+<form class="charge-form group-options">
   <h4>Charge</h4>
-    <label for= "amount">Amount</label>
-    <input id = "charge-amount" type="text" id="amount" name="amount" placeholder="100" />
-   
-    <select id = "charge-currency" name="customer-card-currency">
+    <label for="amount">Amount</label>
+    <input id="charge-amount" type="text" name="amount" placeholder="100">
+
+    <select id="charge-currency" name="customer-card-currency">
          <option value="AED">AED</option>
 <option value="AFN">AFN</option>
 <option value="ALL">ALL</option>
@@ -148,29 +148,29 @@
 <option value="ZAR">ZAR</option>
 <option value="ZMW">ZMW</option>
      </select>
-     
-   <div class = "flow-form">
-     <input id = "standard_button"type="radio"name="flow" value="Standard" checked>
-    <label  class = "db" for="standard_button">Standard</label>
-    
-     <input id ="direct_button"type="radio" name="flow" value="Direct">
+
+   <div class="flow-form">
+     <input id="standard_button" type="radio" name="flow" value="Standard" checked="">
+    <label class="db" for="standard_button">Standard</label>
+
+     <input id="direct_button" type="radio" name="flow" value="Direct">
     <label for="direct_button">Direct</label>
 
-    <input id = "destination_button"type="radio"name="flow" value="Destination">
-    <label id = "dest" class = "db" for="destination_button">Destination</label>
-    
-    <input id = "sct_button"type="radio"name="flow" value="SCT">
-    <label title="Separate Charges and Transfers" class = "db" for="sct_button">SCT</label>
+    <input id="destination_button" type="radio" name="flow" value="Destination">
+    <label id="dest" class="db" for="destination_button">Destination</label>
+
+    <input id="sct_button" type="radio" name="flow" value="SCT">
+    <label title="Separate Charges and Transfers" class="db" for="sct_button">SCT</label>
    </div>
-   
+
 </form>
 
 <!-- Customer Options -->
-<form class = "customer-form group-options">
+<form class="customer-form group-options">
   <div>
       <h4>Customer</h4>
       <label for="customer-card-country">Card Country</label>
-      <select id = "customer-card" name="customer-card-country">
+      <select id="customer-card" name="customer-card-country">
           <option value="AF">Afghanistan</option>
           <option value="AL">Albania</option>
           <option value="DZ">Algeria</option>
@@ -420,11 +420,11 @@
           <option value="ZW">Zimbabwe</option>
           <option value="AX">Åland Islands</option>
       </select>
-      <!-- 
+      <!--
       <label for="customer-card-currency">Card Currency</label>
       <select class = "customer-card-currency" name="customer-card-currency">
         <option data-default="true">Select Currency...</option>
-         
+
 <option value="AED">AED</option>
 <option value="AFN">AFN</option>
 <option value="ALL">ALL</option>
@@ -563,15 +563,15 @@
 <option value="ZMW">ZMW</option>
       </select> -->
   </div>
-  
+
 </form>
 
 <!-- Connected Options -->
-<form class = "connected-form group-options">
+<form class="connected-form group-options">
   <div>
       <h4>Account</h4>
       <label for="connected-account-country">Country</label>
-      <select id = "connected-country" name="connected-account-country">
+      <select id="connected-country" name="connected-account-country">
           <option value="AU">Australia</option>
           <option value="AT">Austria</option>
           <option value="BE">Belgium</option>
@@ -598,9 +598,9 @@
           <option value="GB">United Kingdom</option>
           <option selected="selected" value="US">United States</option>
       </select>
-      
+
       <label for="connected-bank-currency">Bank Account Currency</label>
-      <select id = "connected-currency" name="connected-bank-currency">
+      <select id="connected-currency" name="connected-bank-currency">
           <option value="AUD">AUD</option>
           <option value="CAD">CAD</option>
           <option value="CHF">CHF</option>
@@ -617,15 +617,15 @@
           <option selected="selected" value="USD">USD</option>
       </select>
   </div>
-  
+
 </form>
 
 <!-- Platform Options -->
-<form class = "platform-form group-options">
+<form class="platform-form group-options">
   <div>
       <h4>Platform</h4>
       <label for="platform-account-country">Country</label>
-      <select id = "platform-country" name="platform-account-country">
+      <select id="platform-country" name="platform-account-country">
           <option value="AU">Australia</option>
           <option value="AT">Austria</option>
           <option value="BE">Belgium</option>
@@ -652,9 +652,9 @@
           <option value="GB">United Kingdom</option>
           <option selected="selected" value="US">United States</option>
       </select>
-      
+
       <label for="platform-bank-currency">Bank Account Currency</label>
-      <select id = "platform-currency" name="platform-bank-currency">
+      <select id="platform-currency" name="platform-bank-currency">
           <option value="AUD">AUD</option>
           <option value="CAD">CAD</option>
           <option value="CHF">CHF</option>
@@ -670,21 +670,26 @@
           <option value="SGD">SGD</option>
           <option selected="selected" value="USD">USD</option>
       </select>
-      
-       <label for= "platform"><span class="platform">Platform</span> Percent:</label> 
-        <input id = "platform-fee" type="text" id="platform" name="platform" placeholder="10" />
+
+       <label for="platform"><span class="platform">Platform</span> Percent:</label>
+        <input id="platform-fee" type="text" name="platform" placeholder="10">
   </div>
-  
+
 </form>
 
 
 
-<div id = "button_div">
+<div id="button_div">
 <button id="calculateButton" class="button">Calculate</button>
 </div>
 
 
-<textarea id = "outcome" cols = "60" rows = "35"></textarea>
+<textarea id="outcome" cols="60" rows="35"></textarea>
+
+<div id="outcome_overlay">
+    <div id="outcome_x"><button id="overlay_x_button">X</button></div>
+    <div id="outcome_inner"></div>
+</div>
 
 
 
@@ -703,3 +708,4 @@ The Connected Account dictates the pricing model used, and this can be internati
 
 -->
 
+</body>

@@ -39,16 +39,8 @@ var Charge = (function() {
         this.final.fxPercent = this.account.pricingModel.fxPercent;
         this.stripeFee = new Fee.Stripe(this.final, this.pricing, this.account.country);
 
-        /* How I imagine it should be. If there's an afterFxFee you know it converted
-        if (currenciesAreDifferent) {
-            this.settlement = this.presentment.convertTo(this.account.currency);
-            this.settlement.fxFee = this.settlement.times(this.account.pricingModel.fxMultiplier);
-            this.settlement.afterFxFee = this.settlement.minus(this.settlement.fxFee);
-        } else {
-            this.settlement = this.presentment;
-        }
-        */
-
+        this.meetsMinimumAmount = Money.meetsMinimumAmount(this.settlement.currency,
+            this.settlement.amount);
 
         function currenciesAreDifferent() {
             return (that.presentment.currency !== that.account.currency);
@@ -92,7 +84,9 @@ var Charge = (function() {
         this.applicationFee = new Fee.Application(this.platform, this, this.type);
 
         var final = this.final.afterFxFee || this.final;
+        //console.log("final: " + final);
         this.connectedPortion = final.minus(this.applicationFee.settlement);
+        //console.log("this.connectedPortion" + this.connectedPortion);
     };
 
 

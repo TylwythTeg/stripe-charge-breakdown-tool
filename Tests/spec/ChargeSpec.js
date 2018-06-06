@@ -268,4 +268,46 @@ describe ("Charge", function () {
             expect(myCharge.pricing.toString()).toEqual("2.9 + 0.3 USD");
         });
     });
+
+    it("Surfaces whether the settled amount meets our charge minimum on meetsMinimumAmount attribute", function () {
+
+        var myCharge = new Charge.Standard({
+                amount: 100,
+                currency: "USD",
+                customer: {
+                    country: "US",
+                },
+                account: {
+                    country: "US",
+                    currency: "USD"
+                }
+        });
+        expect(myCharge.meetsMinimumAmount).toEqual(true);
+
+        var myCharge = new Charge.Standard({
+                amount: 0.3,
+                currency: "USD",
+                customer: {
+                    country: "US",
+                },
+                account: {
+                    country: "US",
+                    currency: "USD"
+                }
+        });
+        expect(myCharge.meetsMinimumAmount).toEqual(false);
+
+        var myCharge = new Charge.Standard({
+                amount: 0.1,
+                currency: "EGP",
+                customer: {
+                    country: "US",
+                },
+                account: {
+                    country: "US",
+                    currency: "USD"
+                }
+        });
+        expect(myCharge.meetsMinimumAmount).toEqual(false);
+    });
 });

@@ -177,6 +177,33 @@ var Log = (function() {
         this.events.push(this.paymentFlow.events.join("\n"));
 
         this.output = this.events.join("\n");
+
+        // scrap everything we just did and generate the error message
+        if (!charge.meetsMinimumAmount) {
+            this.error = Log.Error(charge);
+            this.hasError = true;
+        } else if (charge.connect() && (charge.platform.feeMultiplier > 1 || charge.platform.feeMultiplier < 0)) {
+            this.error = Log.Error_appFee_bounds(charge);
+            this.hasError = true;
+        }
+    };
+
+    // Specifically for a charge that doesn't meet the minimum charge amount
+    Log.Error = function(charge) {
+        error = "Error: " + charge.settlement + " ";
+        if(charge.settlement.currency !== charge.presentment.currency) {
+            error += "(converted from " + charge.presentment + ") ";
+        }
+        error += "is less than the minimum (" + Money.getMinimumAmount(charge.settlement.currency);
+        error += " " + charge.settlement.currency + ")";
+        return error;
+    };
+
+    //appfee can't be < 0% or > 100%
+    Log.Error_appFee_bounds = function(charge) {
+        error = "Error: App fee (" + charge.platform.feePercent + "%) ";
+        error += "cannot be below 0% or higher than 100%"
+        return error;
     };
 
     return Log;

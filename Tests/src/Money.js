@@ -53,6 +53,36 @@ var Money = (function() {
         return (this.currency === money.currency && this.amount.toNumber() === money.amount.toNumber());
     };
 
+    var minimumAmounts = {
+        "USD": 0.5,
+        "AUD": 0.5,
+        "BRL": 0.5,
+        "CAD": 0.5,
+        "CHF": 0.5,
+        "DKK": 2.5,
+        "EUR": 0.5,
+        "GBP": 0.3,
+        "HKD": 4,
+        "JPY": 50,
+        "MXN": 10,
+        "NOK": 3,
+        "NZD": 0.5,
+        "SEK": 3,
+        "SGD": 0.5,
+    };
+
+    Money.getMinimumAmount = function(currency) {
+        return minimumAmounts[currency] || "No record of minimum amount for currency found";
+    };
+
+    function meetsMinimumAmount(currency, amount, settlementCurrency) {
+        settlementCurrency = settlementCurrency || currency;
+        var settledAmount = new Money(amount,currency).convertTo(settlementCurrency).amount;
+        var minAmount = new Decimal(minimumAmounts[settlementCurrency]);
+        return ((settledAmount.comparedTo(minAmount) == 1) || (settledAmount.comparedTo(minAmount) == 0));
+    }
+    Money.meetsMinimumAmount = meetsMinimumAmount;
+
     var zeroDecimalCurrencies = [
         "MGA",
         "BIF",
@@ -70,6 +100,12 @@ var Money = (function() {
         "KRW",
         "KMF",
     ];
+
+    Money.smallestCurrencyUnit = function(currency) {
+        return zeroDecimalCurrencies.includes(currency) ?
+            new Money(1, currency) :
+            new Money(0.01, currency);
+    };
 
     /* Add basic Decimal.js support */
     (function buildMathMethods() {
