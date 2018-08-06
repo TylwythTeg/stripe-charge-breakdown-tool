@@ -1014,12 +1014,19 @@ window.onload = function() {
         var c = elements.connectedCurrency.value;
         var d = elements.platformCountry.value;
         var e = elements.platformCurrency.value;
-        var f = elements.platformFee.value;
+        var platformFee = elements.platformFee.value;
         var g = elements.chargeAmount.value;
         var h = elements.chargeCurrency.value;
-
-
+        
         var flow = getChargeType();
+        
+        /* not my finest moment */
+        if ((elements.platformFee.value === "") && (flow === "SCT")) {
+            platformFee = 10;
+        }
+
+
+        
         var myCharge = new Charge[flow]({
             amount: g,
             currency: h,
@@ -1033,7 +1040,7 @@ window.onload = function() {
             platform: {
                 country: d,
                 currency: e,
-                percentFee: f
+                percentFee: platformFee
             }
         });
 
