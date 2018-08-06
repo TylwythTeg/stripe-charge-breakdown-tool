@@ -307,7 +307,7 @@ color: rgba(104, 39, 46,10);
   background-color: rgba(239, 227, 228,0.8);
 border: none;
 color: rgb(104, 39, 46);
-
+display:none;
 }
 
 #outcome_overlay {
@@ -352,4 +352,20 @@ color: rgb(104, 39, 46);
 
 #overlay_x_button:hover {
   cursor: pointer;
+}
+
+
+
+#platform-fee.visible {
+    display: block;
+}
+
+
+
+#platform-fee-label.visible {
+    display: block;
+}
+
+#platform-fee-label {
+    display: none;
 }

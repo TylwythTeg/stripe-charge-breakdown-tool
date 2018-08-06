@@ -935,6 +935,7 @@ function getInputElements() {
         platformCountry: document.getElementById("platform-country"),
         platformCurrency: document.getElementById("platform-currency"),
         platformFee: document.getElementById("platform-fee"),
+        platformFeeLabel: document.getElementById("platform-fee-label"),
         chargeAmount: document.getElementById("charge-amount"),
         chargeCurrency: document.getElementById("charge-currency"),
         calculateButton: document.getElementById("calculateButton"),
@@ -973,15 +974,32 @@ window.onload = function() {
 
 
     radioFormElement.addEventListener("click", function(event) {
-        if (event.target.type === "radio") {
+        
+        if (event.target.type === "radio") {     
             if (event.target.value === "Standard") {
+                
                 platformElement.classList.remove("visible");
                 outcomeOverlay.classList.remove("connect_sized");
-            } else {
+                elements.platformFee.classList.add("visible");
+                elements.platformFeeLabel.classList.add("visible");
+                
+            } else if (event.target.value === "SCT") {
+                
                 platformElement.classList.add("visible");
                 outcomeOverlay.classList.add("connect_sized");
+                elements.platformFee.classList.remove("visible");
+                elements.platformFeeLabel.classList.remove("visible");
+                
+            } else {
+                
+                platformElement.classList.add("visible");
+                outcomeOverlay.classList.add("connect_sized");
+                elements.platformFee.classList.add("visible");
+                elements.platformFeeLabel.classList.add("visible");
+                
             }
         }
+        
     });
 
     overlayXButton.addEventListener("click", function(event) {
